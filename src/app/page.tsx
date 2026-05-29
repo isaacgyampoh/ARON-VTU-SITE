@@ -134,7 +134,7 @@ export default function Home() {
       <div className="max-w-lg mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">ARON VTU</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">ChaleData</h1>
           <p className="text-sm text-slate-500 mt-1">Buy data instantly. No signup needed.</p>
         </div>
 

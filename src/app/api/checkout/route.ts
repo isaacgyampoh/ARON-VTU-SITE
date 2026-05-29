@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
 
   // Create order
-  const orderNo = 'ARN-' + Date.now().toString(36).toUpperCase()
+  const orderNo = 'CHL-' + Date.now().toString(36).toUpperCase()
   const ref = 'PAY-' + orderNo
 
   const { data: order, error } = await sb.from('orders').insert({
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     paystack: {
       reference: ref,
       amount: Math.round(plan.selling_price * 100), // pesewas
-      email: cleanPhone + '@aronvtu.com',
+      email: cleanPhone + '@chaledata.com',
       currency: 'GHS',
     }
   })

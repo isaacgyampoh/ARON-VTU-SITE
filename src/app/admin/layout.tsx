@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Top nav */}
       <div className="bg-white border-b border-slate-200 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span className="font-bold text-slate-900">ARON VTU</span>
+          <span className="font-bold text-slate-900">ChaleData</span>
           <span className="text-xs text-slate-400">Admin</span>
         </div>
         <a href="/" className="text-xs text-blue-600 hover:underline">View Site →</a>

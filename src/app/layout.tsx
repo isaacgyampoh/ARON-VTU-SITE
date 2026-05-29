@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ARON VTU — Buy Data Instantly',
-  description: 'Buy affordable data bundles for MTN, Telecel, and AirtelTigo instantly. Fast checkout, instant delivery.',
+  title: 'ChaleData — Buy Data Instantly',
+  description: 'Buy cheap data bundles for MTN, Telecel & AirtelTigo. Fast checkout, instant delivery across Ghana.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
