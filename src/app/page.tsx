@@ -1,241 +1,274 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Network, DataPlan } from '@/lib/types'
+
+const GHS = (n: number) => `GH₵ ${n.toFixed(2)}`
+
+const NET_STYLE: Record<string, { bg: string; ring: string; text: string; icon: string }> = {
+  mtn: { bg: 'bg-[#ffcb05]', ring: 'ring-[#ffcb05]', text: 'text-[#003366]', icon: '🟡' },
+  telecel: { bg: 'bg-[#e60000]', ring: 'ring-[#e60000]', text: 'text-white', icon: '🔴' },
+  at: { bg: 'bg-[#003eb3]', ring: 'ring-[#003eb3]', text: 'text-white', icon: '🔵' },
+}
 
 export default function Home() {
   const [networks, setNetworks] = useState<Network[]>([])
   const [plans, setPlans] = useState<DataPlan[]>([])
-  const [selectedNetwork, setSelectedNetwork] = useState<string>('')
+  const [net, setNet] = useState('')
   const [phone, setPhone] = useState('')
-  const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null)
+  const [plan, setPlan] = useState<DataPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; orderNo?: string; error?: string } | null>(null)
+  const [result, setResult] = useState<any>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  async function loadData() {
-    const [{ data: nets }, { data: pls }] = await Promise.all([
+    Promise.all([
       supabase.from('networks').select('*').eq('is_active', true).order('name'),
       supabase.from('data_plans').select('*').eq('is_active', true).order('sort_order').order('selling_price'),
-    ])
-    setNetworks(nets || [])
-    setPlans(pls || [])
-    setLoading(false)
+    ]).then(([{ data: n }, { data: p }]) => {
+      setNetworks(n || [])
+      setPlans(p || [])
+      setLoading(false)
+    })
+  }, [])
+
+  const filtered = plans.filter(p => networks.find(n => n.id === p.network_id)?.code === net)
+  const phoneOk = phone.replace(/\s/g, '').length >= 10
+
+  function selectNet(code: string) {
+    setNet(code)
+    setPlan(null)
+    setTimeout(() => phoneRef.current?.focus(), 100)
   }
 
-  const filteredPlans = plans.filter(p => {
-    const net = networks.find(n => n.id === p.network_id)
-    return net?.code === selectedNetwork
-  })
-
-  const networkColors: Record<string, string> = {
-    mtn: 'bg-yellow-400 text-yellow-900 border-yellow-400',
-    telecel: 'bg-red-500 text-white border-red-500',
-    at: 'bg-blue-500 text-white border-blue-500',
-  }
-
-  const networkBg: Record<string, string> = {
-    mtn: 'border-yellow-300 bg-yellow-50',
-    telecel: 'border-red-300 bg-red-50',
-    at: 'border-blue-300 bg-blue-50',
-  }
-
-  async function handlePay() {
-    if (!selectedPlan || !phone.trim()) return
+  async function pay() {
+    if (!plan || !phoneOk) return
     setPaying(true)
-
     try {
-      const res = await fetch('/api/checkout', {
+      const r = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phone.trim(),
-          network: selectedNetwork,
-          planId: selectedPlan.id,
-        }),
+        body: JSON.stringify({ phone: phone.trim(), network: net, planId: plan.id }),
       })
-      const data = await res.json()
-      if (!data.success) { setPaying(false); setResult({ success: false, error: data.error }); return }
+      const d = await r.json()
+      if (!d.success) { setPaying(false); setResult({ ok: false, msg: d.error }); return }
 
-      // Open Paystack
-      const handler = (window as any).PaystackPop.setup({
+      const h = (window as any).PaystackPop.setup({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-        email: data.paystack.email,
-        amount: data.paystack.amount,
-        currency: data.paystack.currency,
-        ref: data.paystack.reference,
+        email: d.paystack.email,
+        amount: d.paystack.amount,
+        currency: 'GHS',
+        ref: d.paystack.reference,
         channels: ['mobile_money'],
-        callback: () => {
-          setResult({ success: true, orderNo: data.order.order_no })
-          setPaying(false)
-        },
-        onClose: () => {
-          setPaying(false)
-        },
+        callback: () => { setResult({ ok: true, order: d.order.order_no }); setPaying(false) },
+        onClose: () => setPaying(false),
       })
-      handler.openIframe()
+      h.openIframe()
     } catch (e: any) {
       setPaying(false)
-      setResult({ success: false, error: e.message })
+      setResult({ ok: false, msg: e.message })
     }
   }
 
-  // Success/error screen
-  if (result) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-sm w-full text-center fade-in">
-          {result.success ? (
-            <>
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              </div>
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>
-              <p className="text-slate-500 mb-1">Your data is being delivered now.</p>
-              <p className="text-sm text-slate-400 mb-6">Order: {result.orderNo}</p>
-              <div className="bg-slate-100 rounded-xl p-4 mb-6 text-left">
-                <div className="flex justify-between text-sm mb-1"><span className="text-slate-500">Phone</span><span className="font-medium">{phone}</span></div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-slate-500">Network</span><span className="font-medium uppercase">{selectedNetwork}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-slate-500">Bundle</span><span className="font-medium">{selectedPlan?.data_amount}</span></div>
-              </div>
-              <button onClick={() => { setResult(null); setSelectedPlan(null); setPhone('') }} className="w-full h-12 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition">Buy Again</button>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </div>
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Failed</h1>
-              <p className="text-slate-500 mb-6">{result.error || 'Something went wrong. Please try again.'}</p>
-              <button onClick={() => setResult(null)} className="w-full h-12 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition">Try Again</button>
-            </>
-          )}
+  // Result screen
+  if (result) return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm text-center fade-up">
+        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-5 ${result.ok ? 'bg-emerald-50' : 'bg-red-50'}`}>
+          {result.ok
+            ? <svg width="36" height="36" fill="none" stroke="#059669" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            : <svg width="36" height="36" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          }
         </div>
+        <h1 className="text-2xl font-extrabold text-slate-900">{result.ok ? 'Data Sent!' : 'Payment Failed'}</h1>
+        <p className="text-sm text-slate-500 mt-2 mb-6">{result.ok ? 'Your data bundle is being delivered to your number.' : result.msg || 'Something went wrong. Try again.'}</p>
+        {result.ok && (
+          <div className="bg-slate-50 rounded-2xl p-4 text-left mb-6 space-y-2">
+            <div className="flex justify-between text-sm"><span className="text-slate-400">Order</span><span className="font-mono font-semibold text-slate-800">{result.order}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-400">Number</span><span className="font-semibold text-slate-800">{phone}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-400">Bundle</span><span className="font-semibold text-slate-800">{plan?.data_amount} · {plan?.validity}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-400">Amount</span><span className="font-bold text-slate-900">{plan && GHS(plan.selling_price)}</span></div>
+          </div>
+        )}
+        <button onClick={() => { setResult(null); setPlan(null); setPhone(''); setNet('') }} className="w-full h-12 bg-slate-900 text-white rounded-2xl font-semibold press transition hover:bg-slate-800">{result.ok ? 'Buy More Data' : 'Try Again'}</button>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center fade-up">
+        <div className="text-xl font-extrabold text-slate-900 tracking-tight mb-3">ChaleData</div>
+        <div className="w-7 h-7 border-[2.5px] border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
-    <>
-      <script src="https://js.paystack.co/v2/inline.js" />
-      <div className="max-w-lg mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">ChaleData</h1>
-          <p className="text-sm text-slate-500 mt-1">Buy data instantly. No signup needed.</p>
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="px-4 h-16 flex items-center justify-between max-w-lg mx-auto">
+        <div>
+          <span className="text-lg font-extrabold text-slate-900 tracking-tight">Chale</span>
+          <span className="text-lg font-extrabold text-blue-600 tracking-tight">Data</span>
         </div>
+        <a href="/order" className="text-xs font-semibold text-slate-400 hover:text-blue-600 transition">Track Order</a>
+      </header>
 
-        {/* Step 1: Network */}
-        <div className="mb-6">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">1. Select Network</label>
-          <div className="grid grid-cols-3 gap-3">
-            {networks.map(n => (
-              <button
-                key={n.code}
-                onClick={() => { setSelectedNetwork(n.code); setSelectedPlan(null) }}
-                className={`h-14 rounded-xl font-bold text-sm border-2 transition-all duration-200 ${
-                  selectedNetwork === n.code
-                    ? networkColors[n.code] + ' shadow-md scale-[1.02]'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                {n.name}
-              </button>
-            ))}
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 mx-4 rounded-3xl p-6 mb-8 max-w-lg sm:mx-auto relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #3b82f6 0%, transparent 50%), radial-gradient(circle at 80% 20%, #60a5fa 0%, transparent 40%)' }} />
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur px-3 py-1 rounded-full mb-4">
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wider">Instant Delivery</span>
+          </div>
+          <h1 className="text-white text-[22px] font-extrabold leading-tight mb-2">Buy Data<br />In Seconds.</h1>
+          <p className="text-blue-200/60 text-xs leading-relaxed">MTN · Telecel · AirtelTigo<br />No signup. No wallet. Just pay and go.</p>
+        </div>
+      </div>
+
+      {/* Main checkout */}
+      <div className="max-w-lg mx-auto px-4 pb-20">
+        {/* Network */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">1</div>
+            <span className="text-sm font-semibold text-slate-700">Select Network</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            {networks.map(n => {
+              const s = NET_STYLE[n.code] || NET_STYLE.mtn
+              const active = net === n.code
+              return (
+                <button key={n.code} onClick={() => selectNet(n.code)}
+                  className={`h-16 rounded-2xl font-bold text-sm transition-all duration-200 press border-2 ${
+                    active ? `${s.bg} ${s.text} border-transparent shadow-lg shadow-black/10 scale-[1.03]` : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  }`}>
+                  <span className="text-lg">{s.icon}</span>
+                  <div className="mt-0.5">{n.name}</div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Step 2: Phone */}
-        {selectedNetwork && (
-          <div className="mb-6 fade-in">
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">2. Phone Number</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="024 XXX XXXX"
-              className={`w-full h-12 px-4 rounded-xl text-base font-medium border-2 focus:outline-none transition ${
-                selectedNetwork && networkBg[selectedNetwork]
-                  ? networkBg[selectedNetwork]
-                  : 'border-slate-200 bg-white'
-              } focus:border-blue-500`}
-            />
+        {/* Phone */}
+        {net && (
+          <div className="mb-5 fade-up">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">2</div>
+              <span className="text-sm font-semibold text-slate-700">Phone Number</span>
+            </div>
+            <div className="relative">
+              <input
+                ref={phoneRef}
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="024 000 0000"
+                className="w-full h-14 px-4 pr-12 bg-white rounded-2xl text-[16px] font-semibold text-slate-900 border-2 border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition placeholder:text-slate-300 placeholder:font-normal"
+              />
+              {phoneOk && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center scale-in">
+                  <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Step 3: Bundles */}
-        {selectedNetwork && phone.length >= 9 && (
-          <div className="mb-6 fade-in">
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">3. Choose Bundle</label>
-            <div className="grid grid-cols-2 gap-2">
-              {filteredPlans.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPlan(p)}
-                  className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                    selectedPlan?.id === p.id
-                      ? 'border-blue-500 bg-blue-50 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="text-lg font-bold text-slate-900">{p.data_amount}</div>
-                  <div className="text-xs text-slate-400">{p.validity}</div>
-                  <div className="text-sm font-bold text-blue-600 mt-1">GHS {p.selling_price.toFixed(2)}</div>
-                </button>
-              ))}
+        {/* Bundles */}
+        {net && phoneOk && (
+          <div className="mb-5 fade-up">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">3</div>
+              <span className="text-sm font-semibold text-slate-700">Choose Bundle</span>
             </div>
-            {filteredPlans.length === 0 && (
-              <p className="text-center text-slate-400 py-8">No bundles available for this network.</p>
+            {filtered.length === 0 ? (
+              <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center">
+                <p className="text-sm text-slate-400">No bundles available for this network yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                {filtered.map(p => {
+                  const active = plan?.id === p.id
+                  const s = NET_STYLE[net]
+                  return (
+                    <button key={p.id} onClick={() => setPlan(p)}
+                      className={`p-4 rounded-2xl text-left transition-all duration-200 press border-2 ${
+                        active ? `${s.ring} ring-2 ring-offset-2 border-transparent bg-white shadow-lg` : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                      }`}>
+                      <div className="text-xl font-extrabold text-slate-900 leading-none">{p.data_amount}</div>
+                      <div className="text-[11px] text-slate-400 mt-1 font-medium">{p.validity}</div>
+                      <div className="text-base font-bold text-blue-600 mt-2">{GHS(p.selling_price)}</div>
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
 
-        {/* Step 4: Pay */}
-        {selectedPlan && phone.length >= 9 && (
-          <div className="fade-in">
-            <div className="bg-slate-900 text-white rounded-xl p-4 mb-4 flex justify-between items-center">
-              <div>
-                <div className="text-xs text-slate-400">Total</div>
-                <div className="text-xl font-bold">GHS {selectedPlan.selling_price.toFixed(2)}</div>
+        {/* Pay button */}
+        {plan && phoneOk && (
+          <div className="fade-up">
+            {/* Summary */}
+            <div className="bg-slate-900 rounded-2xl p-5 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Summary</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${NET_STYLE[net]?.bg} ${NET_STYLE[net]?.text}`}>{net.toUpperCase()}</span>
               </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-400">{selectedPlan.data_amount}</div>
-                <div className="text-sm font-medium">{phone}</div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-sm"><span className="text-slate-400">Phone</span><span className="text-white font-mono">{phone}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-400">Bundle</span><span className="text-white font-semibold">{plan.data_amount} · {plan.validity}</span></div>
+                <div className="flex justify-between items-baseline pt-2 border-t border-slate-700/50 mt-2">
+                  <span className="text-xs text-slate-400">Total</span>
+                  <span className="text-2xl font-extrabold text-white">{GHS(plan.selling_price)}</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={handlePay}
-              disabled={paying}
-              className="w-full h-14 bg-blue-600 text-white rounded-xl text-base font-bold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
+
+            <button onClick={pay} disabled={paying}
+              className="w-full h-14 bg-blue-600 text-white rounded-2xl text-base font-bold press transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {paying ? (
-                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                <><div className="w-5 h-5 border-[2.5px] border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
               ) : (
-                <>Pay GHS {selectedPlan.selling_price.toFixed(2)}</>
+                <>Pay {GHS(plan.selling_price)} →</>
               )}
             </button>
-            <p className="text-center text-[11px] text-slate-400 mt-3">Secured by Paystack · Instant delivery</p>
+
+            {/* Trust */}
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Secured by Paystack
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Instant delivery
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Track order link */}
-        <div className="text-center mt-10 pt-6 border-t border-slate-200">
-          <a href="/order" className="text-sm text-blue-600 font-medium hover:underline">Track an existing order →</a>
+        {/* Footer */}
+        <div className="mt-16 pt-6 border-t border-slate-200 text-center">
+          <div className="mb-2">
+            <span className="text-sm font-extrabold text-slate-900">Chale</span>
+            <span className="text-sm font-extrabold text-blue-600">Data</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mb-3">Buy affordable data bundles instantly.<br />No signup needed.</p>
+          <div className="flex justify-center gap-4 text-[11px] text-slate-400">
+            <a href="/order" className="hover:text-blue-600 transition">Track Order</a>
+            <span>·</span>
+            <a href="/admin" className="hover:text-blue-600 transition">Admin</a>
+          </div>
+          <p className="text-[10px] text-slate-300 mt-4">&copy; {new Date().getFullYear()} ChaleData</p>
         </div>
       </div>
-    </>
+    </div>
   )
 }
