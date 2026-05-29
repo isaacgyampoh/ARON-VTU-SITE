@@ -4,6 +4,7 @@ export type Network = {
   code: string
   logo_url: string | null
   is_active: boolean
+  type: 'data' | 'streaming'
 }
 
 export type DataPlan = {
@@ -17,6 +18,8 @@ export type DataPlan = {
   vendor_plan_id: string | null
   is_active: boolean
   sort_order: number
+  category: 'data' | 'streaming'
+  networks?: { name: string; code: string; type: string }
 }
 
 export type VendorApi = {
