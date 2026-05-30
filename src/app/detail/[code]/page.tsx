@@ -39,7 +39,7 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
   }, [code])
 
   const phoneOk = phone.replace(/\s/g, '').length >= 10
-  const isStreaming = network?.type === 'streaming'
+  const isStreaming = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon'].includes(code)
   const colors = NET_COLORS[code] || NET_COLORS.mtn
 
   async function pay() {
