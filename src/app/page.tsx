@@ -6,7 +6,7 @@ import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${n.toFixed(2)}`
-const DATA_TYPES = ['mtn', 'mtninstant', 'telecel', 'at', 'airteltigo']
+const DATA_TYPES = ['mtn', 'mtninstant', 'mtnafa', 'telecel', 'at', 'airteltigo']
 const STREAM_TYPES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 
 function NetworkLogo({ code, name, logoUrl, size }: {

@@ -7,6 +7,7 @@ import type { Network } from '@/lib/types'
 const PRESET_CODES = [
   { code: 'mtn', name: 'MTN', type: 'data' },
   { code: 'mtninstant', name: 'MTN Instant', type: 'data' },
+  { code: 'mtnafa', name: 'MTN AFA Bundle', type: 'data' },
   { code: 'telecel', name: 'Telecel', type: 'data' },
   { code: 'at', name: 'AirtelTigo iShare', type: 'data' },
   { code: 'airteltigo', name: 'AirtelTigo Big Data', type: 'data' },
