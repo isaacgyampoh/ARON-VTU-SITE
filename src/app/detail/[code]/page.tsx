@@ -50,10 +50,13 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
       if (!d.success) { setPaying(false); setResult({ ok: false, msg: d.error }); return }
 
       const ps = (window as any).PaystackPop
-      if (!ps) { setPaying(false); setResult({ ok: false, msg: 'Payment script failed to load. Refresh and try again.' }); return }
+      if (!ps) { setPaying(false); setResult({ ok: false, msg: 'Payment script failed to load. Please refresh and try again.' }); return }
+
+      const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
+      if (!paystackKey) { setPaying(false); setResult({ ok: false, msg: 'Payment not configured. Please contact support on WhatsApp.' }); return }
 
       ps.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        key: paystackKey,
         email: d.paystack.email,
         amount: d.paystack.amount,
         currency: 'GHS',
