@@ -29,6 +29,8 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
         .order('sort_order')
         .order('selling_price')
       setPlans(pls || [])
+      // Auto-select first plan
+      if (pls && pls.length > 0) setSelected(pls[0])
     }
     load()
   }, [code])
@@ -117,8 +119,7 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
             </div>
             <h1 className="text-xl font-black text-black mb-1">Payment failed</h1>
             <p className="text-[13px] text-gray-400 mb-6">{result.msg || 'Please try again.'}</p>
-            <button onClick={() => setResult(null)}
-              className="press w-full h-11 bg-black text-white rounded-xl text-[13px] font-bold">
+            <button onClick={() => setResult(null)} className="press w-full h-11 bg-black text-white rounded-xl text-[13px] font-bold">
               Try Again
             </button>
           </div>
@@ -133,6 +134,14 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
       <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
     </div>
   )
+
+  const priceRange = plans.length > 0
+    ? (() => {
+        const min = Math.min(...plans.map(p => p.selling_price))
+        const max = Math.max(...plans.map(p => p.selling_price))
+        return min === max ? GHS(min) : `${GHS(min)} – ${GHS(max)}`
+      })()
+    : null
 
   return (
     <div className="min-h-screen bg-white">
@@ -154,111 +163,108 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
         </div>
       </nav>
 
-      <div className="max-w-lg mx-auto px-4 pb-40">
+      <div className="max-w-lg mx-auto px-4 pt-6 pb-44">
 
-        {/* ── Network header ── */}
-        <div className="flex items-center gap-4 py-6 border-b border-gray-100">
-          {logo
-            ? <img src={logo} alt={network.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0" />
-            : <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[12px] font-bold flex-shrink-0"
-                style={{ background: b.bg, color: b.text }}>{b.short}</div>
-          }
-          <div>
-            <h1 className="text-[18px] font-black text-black leading-tight">{network.name}</h1>
-            <p className="text-[12px] text-gray-400 mt-0.5">
-              {plans.length > 0 ? `${plans.length} plans available` : 'No plans yet'}
-            </p>
-          </div>
+        {/* ── Network name + price range ── */}
+        <div className="mb-6">
+          <h1 className="text-[26px] font-black text-black leading-tight">{network.name}</h1>
+          {priceRange && (
+            <p className="text-[15px] text-gray-400 mt-1">{priceRange}</p>
+          )}
         </div>
 
+        {/* ── Data size grid ── */}
+        {plans.length > 0 && (
+          <div className="mb-8">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Data Size</p>
+            <div className="grid grid-cols-4 gap-2">
+              {plans.map(p => {
+                const on = selected?.id === p.id
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelected(p)}
+                    className={`press h-12 rounded-xl text-[13px] font-bold border-2 transition-all ${
+                      on
+                        ? 'text-white border-transparent'
+                        : 'bg-white text-black border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={on ? { background: b.bg, color: b.text, borderColor: b.bg } : {}}
+                  >
+                    {p.data_amount}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Price display ── */}
+        {selected && (
+          <div className="mb-8">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Price</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[15px] font-semibold text-gray-500">GH₵</span>
+              <span className="text-[42px] font-black text-black leading-none">
+                {Number(selected.selling_price).toFixed(2).split('.')[0]}
+              </span>
+              <span className="text-[22px] font-black text-black leading-none">
+                .{Number(selected.selling_price).toFixed(2).split('.')[1]}
+              </span>
+            </div>
+            <p className="text-[12px] text-gray-400 mt-1">{selected.name} · {selected.validity}</p>
+          </div>
+        )}
+
         {/* ── Phone input ── */}
-        <div className="mt-6 mb-5">
+        <div className="mb-6">
           <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
-            Phone Number
+            Beneficiary Phone Number <span className="text-red-400">*</span>
           </label>
           <input
             type="tel"
             inputMode="numeric"
             value={phone}
             onChange={e => setPhone(e.target.value)}
-            placeholder="024 000 0000"
-            className="w-full h-12 px-4 text-[15px] font-medium bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 focus:bg-white transition-all"
+            placeholder="enter number here"
+            className="w-full h-12 px-4 text-[15px] font-medium bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition-all placeholder:text-gray-300"
           />
         </div>
 
-        {/* ── Plan list ── */}
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
-            Choose a Plan
-          </label>
-          {plans.length === 0 ? (
-            <p className="text-[13px] text-gray-300 py-12 text-center">No plans available yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {plans.map(p => {
-                const on = selected?.id === p.id
-                return (
-                  <button key={p.id} onClick={() => setSelected(p)}
-                    className={`press w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left border transition-all ${
-                      on
-                        ? 'border-black bg-white shadow-[0_0_0_3px_rgba(0,0,0,0.06)]'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}>
-                    <div>
-                      <div className="text-[14px] font-bold text-black">{p.data_amount}</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">{p.name} · {p.validity}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[14px] font-bold text-black">{GHS(p.selling_price)}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                        on ? 'border-black bg-black' : 'border-gray-300'
-                      }`}>
-                        {on && (
-                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                            <path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+        {/* ── No plans ── */}
+        {plans.length === 0 && (
+          <p className="text-[13px] text-gray-300 py-12 text-center">No plans available yet.</p>
+        )}
+
+      </div>
+
+      {/* ── Sticky BUY button ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-8 max-w-lg mx-auto">
+          <button
+            onClick={pay}
+            disabled={paying || !selected || !phoneOk}
+            className="press w-full h-14 rounded-xl text-[15px] font-black tracking-wide flex items-center justify-center gap-2 transition-opacity disabled:opacity-40"
+            style={{ background: b.bg, color: b.text }}
+          >
+            {paying ? (
+              <>
+                <span className="w-4 h-4 border-2 rounded-full animate-spin flex-shrink-0"
+                  style={{ borderColor: `${b.text}40`, borderTopColor: b.text }} />
+                Processing…
+              </>
+            ) : (
+              selected && phoneOk
+                ? `BUY — ${GHS(selected.selling_price)}`
+                : !selected
+                ? 'Select a plan'
+                : 'Enter phone number'
+            )}
+          </button>
+          <p className="text-center text-[11px] text-gray-300 mt-2">Mobile Money · Secured by Paystack</p>
         </div>
       </div>
 
-      {/* ── Sticky pay bar ── */}
-      {selected && phoneOk && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 fade-up">
-          <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-7 max-w-lg mx-auto">
-            {/* Mini summary */}
-            <div className="flex items-center justify-between text-[12px] text-gray-400 mb-3 px-1">
-              <span>{selected.data_amount} · {selected.validity}</span>
-              <span>{phone}</span>
-            </div>
-            <button
-              onClick={pay}
-              disabled={paying}
-              className="press w-full h-12 rounded-xl text-[14px] font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition-opacity"
-              style={{ background: b.bg, color: b.text }}
-            >
-              {paying ? (
-                <>
-                  <span className="w-4 h-4 border-2 rounded-full animate-spin flex-shrink-0"
-                    style={{ borderColor: `${b.text}40`, borderTopColor: b.text }} />
-                  Processing…
-                </>
-              ) : (
-                `Pay ${GHS(selected.selling_price)}`
-              )}
-            </button>
-            <p className="text-center text-[11px] text-gray-300 mt-2">
-              Mobile Money only · Secured by Paystack
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
