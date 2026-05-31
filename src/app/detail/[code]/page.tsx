@@ -6,6 +6,7 @@ import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${n.toFixed(2)}`
+const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 
 export default function DetailPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params)
@@ -173,31 +174,59 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
           )}
         </div>
 
-        {/* ── Data size grid ── */}
-        {plans.length > 0 && (
-          <div className="mb-8">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Data Size</p>
-            <div className="grid grid-cols-4 gap-2">
-              {plans.map(p => {
-                const on = selected?.id === p.id
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelected(p)}
-                    className={`press h-12 rounded-xl text-[13px] font-bold border-2 transition-all ${
-                      on
-                        ? 'text-white border-transparent'
-                        : 'bg-white text-black border-gray-200 hover:border-gray-300'
-                    }`}
-                    style={on ? { background: b.bg, color: b.text, borderColor: b.bg } : {}}
-                  >
-                    {p.data_amount}
-                  </button>
-                )
-              })}
+        {/* ── Plan selector: grid for data, list for streaming ── */}
+        {plans.length > 0 && (() => {
+          const isStream = STREAM_CODES.includes(code)
+          return isStream ? (
+            /* Streaming: vertical duration cards */
+            <div className="mb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Choose Duration</p>
+              <div className="space-y-2">
+                {plans.map(p => {
+                  const on = selected?.id === p.id
+                  return (
+                    <button key={p.id} onClick={() => setSelected(p)}
+                      className={`press w-full flex items-center justify-between px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                        on ? 'border-black bg-black/[.02]' : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}>
+                      <div>
+                        <div className="text-[15px] font-bold text-black">{p.data_amount}</div>
+                        {p.name && p.name !== p.data_amount && (
+                          <div className="text-[11px] text-gray-400 mt-0.5">{p.name}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[15px] font-bold text-black">{GHS(p.selling_price)}</span>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${on ? 'border-black bg-black' : 'border-gray-300'}`}>
+                          {on && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            /* Data: compact grid of sizes */
+            <div className="mb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Data Size</p>
+              <div className="grid grid-cols-4 gap-2">
+                {plans.map(p => {
+                  const on = selected?.id === p.id
+                  return (
+                    <button key={p.id} onClick={() => setSelected(p)}
+                      className={`press h-12 rounded-xl text-[13px] font-bold border-2 transition-all ${
+                        on ? 'text-white border-transparent' : 'bg-white text-black border-gray-200 hover:border-gray-300'
+                      }`}
+                      style={on ? { background: b.bg, color: b.text, borderColor: b.bg } : {}}>
+                      {p.data_amount}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── Price display ── */}
         {selected && (
