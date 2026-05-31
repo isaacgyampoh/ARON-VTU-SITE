@@ -6,27 +6,19 @@ import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${n.toFixed(2)}`
-const DATA_TYPES = ['mtn','mtninstant','telecel','at','airteltigo']
-const STREAM_TYPES = ['netflix','applemusic','appletv','applegames','icloud','amazon']
+const DATA_TYPES = ['mtn', 'mtninstant', 'telecel', 'at', 'airteltigo']
+const STREAM_TYPES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 
-function NetworkIcon({ code, name, logoUrl }: { code: string; name: string; logoUrl?: string | null }) {
+function NetworkLogo({ code, name, logoUrl, size }: {
+  code: string; name: string; logoUrl?: string | null; size: number
+}) {
   const logo = logoUrl || NETWORK_LOGOS[code]
-  const b = BRAND[code] || { bg: '#111', text: '#fff', short: code.slice(0, 3).toUpperCase() }
-  if (logo) {
-    return (
-      <img
-        src={logo}
-        alt={name}
-        className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-      />
-    )
-  }
+  const b = BRAND[code] || { bg: '#e5e7eb', text: '#374151', short: code.slice(0, 3).toUpperCase() }
+  const s = `w-${size} h-${size}`
+  if (logo) return <img src={logo} alt={name} className={`${s} rounded-xl object-cover flex-shrink-0`} />
   return (
-    <div
-      className="w-12 h-12 rounded-xl flex items-center justify-center text-[11px] font-black flex-shrink-0 leading-none"
-      style={{ background: b.bg, color: b.text }}
-    >
+    <div className={`${s} rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0`}
+      style={{ background: b.bg, color: b.text }}>
       {b.short}
     </div>
   )
@@ -62,13 +54,9 @@ export default function Home() {
     return min === max ? GHS(min) : `${GHS(min)} – ${GHS(max)}`
   }
 
-  function planCount(id: string) {
-    return plans.filter(x => x.network_id === id).length
-  }
-
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="w-5 h-5 border-2 border-gray-200 border-t-black rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
     </div>
   )
 
@@ -76,104 +64,122 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <nav className="h-14 px-4 flex items-center justify-between max-w-4xl mx-auto border-b border-gray-100">
-        <a href="/" className="flex items-center gap-0.5">
-          <span className="text-base font-extrabold text-black tracking-tight">Chale</span>
-          <span className="text-base font-extrabold text-blue-600 tracking-tight">Data</span>
-        </a>
-        <div className="flex items-center gap-5">
-          <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition">Track Order</a>
-          <a href="https://wa.me/233533547740" target="_blank"
-            className="text-[13px] bg-[#25D366] text-white px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition">
-            WhatsApp
+
+      {/* ── Nav ── */}
+      <nav className="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <a href="/" className="flex items-center">
+            <span className="text-[17px] font-black text-black tracking-tight">Chale</span>
+            <span className="text-[17px] font-black text-blue-600 tracking-tight">Data</span>
           </a>
+          <div className="flex items-center gap-4">
+            <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition-colors">
+              Track Order
+            </a>
+            <a href="https://wa.me/233533547740" target="_blank"
+              className="h-8 px-3 rounded-lg text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: '#25D366' }}>
+              WhatsApp
+            </a>
+          </div>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 pb-16">
-        {/* Hero */}
-        <div className="py-10 text-center">
-          <h1 className="text-[30px] md:text-[42px] font-extrabold text-black leading-tight tracking-tight">
-            Buy Data &amp; Streaming<br />Plans Instantly
+      <div className="max-w-4xl mx-auto px-4">
+
+        {/* ── Hero ── */}
+        <div className="pt-12 pb-10 text-center">
+          <h1 className="text-[32px] md:text-[44px] font-black text-black leading-[1.1] tracking-tight">
+            Data &amp; Streaming<br />Delivered Fast
           </h1>
-          <p className="text-gray-400 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
-            MTN · Telecel · AirtelTigo · Netflix · Apple. Fast checkout, instant delivery.
+          <p className="text-[14px] text-gray-400 mt-4 max-w-xs mx-auto leading-relaxed">
+            Buy MTN, Telecel, AirtelTigo data and streaming subscriptions — paid with MoMo in seconds.
           </p>
         </div>
 
-        {/* Tab switcher */}
+        {/* ── Tab bar ── */}
         {dataNets.length > 0 && streamNets.length > 0 && (
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit mx-auto">
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
             {(['data', 'streaming'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${tab === t ? 'bg-white text-black shadow-sm' : 'text-gray-500'}`}>
+                className={`px-5 h-9 rounded-lg text-[13px] font-semibold transition-all ${
+                  tab === t ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}>
                 {t === 'data' ? 'Data Bundles' : 'Streaming'}
               </button>
             ))}
           </div>
         )}
 
-        {/* Network Grid */}
+        {/* ── Network cards ── */}
         {activeNets.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-16">
             {activeNets.map(n => {
               const range = priceRange(n.id)
-              const count = planCount(n.id)
+              const count = plans.filter(p => p.network_id === n.id).length
               return (
                 <a key={n.id} href={`/detail/${n.code}`}
-                  className="flex items-center gap-4 border border-gray-200 rounded-2xl p-4 hover:border-gray-400 hover:shadow-sm transition-all press bg-white">
-                  <NetworkIcon code={n.code} name={n.name} logoUrl={n.logo_url} />
+                  className="press flex items-center gap-3.5 p-4 rounded-2xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all">
+                  <NetworkLogo code={n.code} name={n.name} logoUrl={n.logo_url} size={11} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-black truncate">{n.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-[14px] font-bold text-black leading-tight">{n.name}</div>
+                    <div className="text-[12px] text-gray-400 mt-0.5 truncate">
                       {range || 'Coming soon'}
-                      {count > 0 && <span className="text-gray-300"> · {count} plans</span>}
+                      {count > 0 && <span className="text-gray-300 ml-1">· {count} plans</span>}
                     </div>
                   </div>
-                  <div className="text-xs font-bold text-blue-600 whitespace-nowrap">Buy →</div>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-300 flex-shrink-0">
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </a>
               )
             })}
           </div>
         ) : (
-          <p className="text-center text-gray-300 py-16 text-sm">No products available yet.</p>
+          <p className="text-center text-gray-300 py-20 text-sm">No products available yet.</p>
         )}
 
-        {/* Why us */}
-        <div className="mt-16 grid grid-cols-3 gap-4 text-center">
-          {[
-            { icon: '⚡', label: 'Instant', sub: 'Data sent in seconds' },
-            { icon: '🔒', label: 'Secure', sub: 'Powered by Paystack' },
-            { icon: '📞', label: 'Support', sub: 'WhatsApp anytime' },
-          ].map(x => (
-            <div key={x.label} className="py-6 px-3 rounded-2xl bg-gray-50">
-              <div className="text-2xl mb-1">{x.icon}</div>
-              <div className="text-sm font-bold text-black">{x.label}</div>
-              <div className="text-[11px] text-gray-400 mt-0.5">{x.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <footer className="border-t border-gray-100 pt-8 mt-12">
-          <div className="flex flex-col sm:flex-row justify-between gap-6">
-            <div>
-              <div className="mb-1">
-                <span className="font-extrabold text-black">Chale</span>
-                <span className="font-extrabold text-blue-600">Data</span>
-              </div>
-              <p className="text-xs text-gray-400">Support: <a href="tel:0533547740" className="text-black font-medium">0533547740</a></p>
-            </div>
-            <div className="flex gap-6 text-xs text-gray-400">
-              <a href="/" className="hover:text-black transition">Home</a>
-              <a href="/order" className="hover:text-black transition">Track Order</a>
-              <a href="https://wa.me/233533547740" target="_blank" className="hover:text-black transition">WhatsApp</a>
-            </div>
-          </div>
-          <p className="text-[10px] text-gray-300 mt-6">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
-        </footer>
       </div>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-gray-100 bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-10">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-8">
+
+            {/* Brand */}
+            <div>
+              <div className="flex items-center mb-2">
+                <span className="text-[15px] font-black text-black">Chale</span>
+                <span className="text-[15px] font-black text-blue-600">Data</span>
+              </div>
+              <p className="text-[12px] text-gray-400 leading-relaxed max-w-[180px]">
+                Fast data and streaming plans for Ghana. Powered by Paystack.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div className="flex gap-12 text-[13px]">
+              <div className="flex flex-col gap-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Platform</span>
+                <a href="/" className="text-gray-500 hover:text-black transition-colors">Home</a>
+                <a href="/order" className="text-gray-500 hover:text-black transition-colors">Track Order</a>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Support</span>
+                <a href="https://wa.me/233533547740" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
+                <a href="tel:0533547740" className="text-gray-500 hover:text-black transition-colors">0533547740</a>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="border-t border-gray-100 mt-8 pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <p className="text-[11px] text-gray-300">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
+            <p className="text-[11px] text-gray-300">Ghana · Mobile Money · Instant Delivery</p>
+          </div>
+        </div>
+      </footer>
+
     </div>
   )
 }
