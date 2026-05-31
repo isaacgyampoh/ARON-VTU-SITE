@@ -55,6 +55,14 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
       const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
       if (!paystackKey) { setPaying(false); setResult({ ok: false, msg: 'Payment not configured. Please contact support on WhatsApp.' }); return }
 
+      if (!d.paystack.amount || d.paystack.amount <= 0) {
+        setPaying(false)
+        setResult({ ok: false, msg: 'Invalid amount. Please contact support on WhatsApp.' })
+        return
+      }
+
+      console.log('[Paystack]', { key: paystackKey.slice(0, 12) + '...', amount: d.paystack.amount, ref: d.paystack.reference })
+
       ps.setup({
         key: paystackKey,
         email: d.paystack.email,

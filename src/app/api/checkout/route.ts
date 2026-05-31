@@ -8,21 +8,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  // Validate phone
-  const cleanPhone = phone.replace(/\s+/g, '').replace(/^0/, '233').replace(/^\+/, '')
-  if (cleanPhone.length < 10) {
-    return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 })
+  // Clean phone → always 233XXXXXXXXX format
+  const cleanPhone = phone
+    .replace(/\s+/g, '')
+    .replace(/^\+/, '')
+    .replace(/^0/, '233')
+
+  if (cleanPhone.length < 12) {
+    return NextResponse.json({ error: 'Invalid phone number. Use format: 024 000 0000' }, { status: 400 })
   }
 
   const sb = createServiceClient()
 
   // Get plan
-  const { data: plan } = await sb.from('data_plans').select('*, networks(name, code)').eq('id', planId).single()
-  if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+  const { data: plan, error: planErr } = await sb
+    .from('data_plans')
+    .select('*, networks(name, code)')
+    .eq('id', planId)
+    .single()
+
+  if (planErr || !plan) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+  }
+
+  if (!plan.selling_price || plan.selling_price <= 0) {
+    return NextResponse.json({ error: 'Plan has no price set. Contact support.' }, { status: 400 })
+  }
 
   // Create order
   const orderNo = 'CHL-' + Date.now().toString(36).toUpperCase()
   const ref = 'PAY-' + orderNo
+
+  // Amount in pesewas (GHS × 100), must be integer
+  const amountPesewas = Math.round(Number(plan.selling_price) * 100)
 
   const { data: order, error } = await sb.from('orders').insert({
     order_no: orderNo,
@@ -39,16 +57,17 @@ export async function POST(req: NextRequest) {
   }).select().single()
 
   if (error) {
+    console.error('Order insert error:', error)
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 
   return NextResponse.json({
     success: true,
-    order: order,
+    order,
     paystack: {
       reference: ref,
-      amount: Math.round(plan.selling_price * 100), // pesewas
-      email: cleanPhone + '@chaledata.com',
+      amount: amountPesewas,
+      email: `${cleanPhone}@chaledata.com`,
       currency: 'GHS',
     }
   })
