@@ -6,6 +6,8 @@ export const NETWORK_LOGOS: Record<string, string> = {
   telecel:    '/networks/telecel.jpg',
   at:         '/networks/at.jpg',
   airteltigo: '/networks/at.jpg',
+  amazon:     '/networks/amazon.jpg',
+  netflix:    '/networks/netflix.jpg',
 }
 
 // Fallback brand colors for networks without logos (streaming etc.)
