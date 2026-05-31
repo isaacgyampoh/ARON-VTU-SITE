@@ -4,28 +4,30 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Network, DataPlan } from '@/lib/types'
 
-const GHS = (n: number) => `GH₵ ${n.toFixed(2)}`
-const DATA_CODES = ['mtn', 'telecel', 'at', 'mtninstant', 'airteltigo']
-const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+const GHS = (n: number) => `GH₵${n.toFixed(2)}`
 
-const COLORS: Record<string, { bg: string; text: string }> = {
-  mtn: { bg: '#ffcb05', text: '#003366' },
-  mtninstant: { bg: '#ffcb05', text: '#003366' },
-  telecel: { bg: '#e60000', text: '#fff' },
-  at: { bg: '#003eb3', text: '#fff' },
-  airteltigo: { bg: '#003eb3', text: '#fff' },
-  netflix: { bg: '#e50914', text: '#fff' },
-  applemusic: { bg: '#fa2d48', text: '#fff' },
-  appletv: { bg: '#1a1a1a', text: '#fff' },
-  applegames: { bg: '#0070c9', text: '#fff' },
-  icloud: { bg: '#3693f5', text: '#fff' },
-  amazon: { bg: '#00a8e1', text: '#fff' },
+const BRAND: Record<string, { bg: string; text: string; short: string }> = {
+  mtn:        { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
+  mtninstant: { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
+  telecel:    { bg: '#CC0000', text: '#fff',     short: 'TEL' },
+  at:         { bg: '#0033A0', text: '#fff',     short: 'AT'  },
+  airteltigo: { bg: '#0033A0', text: '#fff',     short: 'AT'  },
+  netflix:    { bg: '#E50914', text: '#fff',     short: 'NF'  },
+  applemusic: { bg: '#FC3C44', text: '#fff',     short: 'AM'  },
+  appletv:    { bg: '#000000', text: '#fff',     short: 'TV'  },
+  applegames: { bg: '#0070C9', text: '#fff',     short: 'AG'  },
+  icloud:     { bg: '#3693F5', text: '#fff',     short: 'iCL' },
+  amazon:     { bg: '#00A8E1', text: '#fff',     short: 'AMZ' },
 }
+
+const DATA_TYPES = ['mtn','mtninstant','telecel','at','airteltigo']
+const STREAM_TYPES = ['netflix','applemusic','appletv','applegames','icloud','amazon']
 
 export default function Home() {
   const [networks, setNetworks] = useState<Network[]>([])
   const [plans, setPlans] = useState<DataPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'data' | 'streaming'>('data')
 
   useEffect(() => {
     async function load() {
@@ -40,109 +42,127 @@ export default function Home() {
     load()
   }, [])
 
-  const dataNets = networks.filter(n => DATA_CODES.includes(n.code))
-  const streamNets = networks.filter(n => STREAM_CODES.includes(n.code))
+  const dataNets = networks.filter(n => DATA_TYPES.includes(n.code) || n.type === 'data')
+  const streamNets = networks.filter(n => STREAM_TYPES.includes(n.code) || n.type === 'streaming')
 
   function priceRange(id: string) {
     const p = plans.filter(x => x.network_id === id)
     if (!p.length) return null
     const min = Math.min(...p.map(x => x.selling_price))
     const max = Math.max(...p.map(x => x.selling_price))
-    return min === max ? GHS(min) : `${GHS(min)} - ${GHS(max)}`
+    return min === max ? GHS(min) : `${GHS(min)} – ${GHS(max)}`
+  }
+
+  function planCount(id: string) {
+    return plans.filter(x => x.network_id === id).length
   }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-gray-200 border-t-black rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-gray-200 border-t-black rounded-full animate-spin" />
     </div>
   )
 
+  const activeNets = tab === 'data' ? dataNets : streamNets
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="h-14 px-4 flex items-center justify-between max-w-4xl mx-auto">
-        <a href="/" className="flex items-center gap-1">
+      <nav className="h-14 px-4 flex items-center justify-between max-w-4xl mx-auto border-b border-gray-100">
+        <a href="/" className="flex items-center gap-0.5">
           <span className="text-base font-extrabold text-black tracking-tight">Chale</span>
           <span className="text-base font-extrabold text-blue-600 tracking-tight">Data</span>
         </a>
         <div className="flex items-center gap-5">
           <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition">Track Order</a>
-          <a href="https://wa.me/233533547740" target="_blank" className="text-[13px] text-gray-500 hover:text-black transition">Contact</a>
+          <a href="https://wa.me/233533547740" target="_blank"
+            className="text-[13px] bg-[#25D366] text-white px-3 py-1.5 rounded-lg font-medium transition hover:opacity-90">
+            WhatsApp
+          </a>
         </div>
       </nav>
 
       <div className="max-w-4xl mx-auto px-4 pb-16">
-        {/* Hero — simple, not flashy */}
-        <div className="py-8 text-center">
-          <h1 className="text-[28px] md:text-4xl font-extrabold text-black leading-tight">Buy Data & Streaming<br />Plans Instantly</h1>
-          <p className="text-gray-400 text-sm mt-3 max-w-md mx-auto">Select a product below, enter your number, and pay with MoMo. Your data arrives in seconds.</p>
+        {/* Hero */}
+        <div className="py-10 text-center">
+          <h1 className="text-[30px] md:text-[42px] font-extrabold text-black leading-tight tracking-tight">
+            Buy Data &amp; Streaming<br />Plans Instantly
+          </h1>
+          <p className="text-gray-400 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
+            MTN · Telecel · AirtelTigo · Netflix · Apple. Fast checkout, instant delivery.
+          </p>
         </div>
 
-        {/* Data Products */}
-        {dataNets.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-lg font-bold text-black mb-4">Data Bundles</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {dataNets.map(n => {
-                const c = COLORS[n.code] || COLORS.mtn
-                const range = priceRange(n.id)
-                const count = plans.filter(p => p.network_id === n.id).length
-                return (
-                  <a key={n.id} href={`/detail/${n.code}`}
-                    className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition press">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-extrabold flex-shrink-0"
-                      style={{ background: c.bg, color: c.text }}>
-                      {n.name.substring(0, 3).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-black">{n.name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{range || 'Coming soon'}{count > 0 ? ` · ${count} plans` : ''}</div>
-                    </div>
-                    <div className="text-sm font-bold text-blue-600">Buy Now →</div>
-                  </a>
-                )
-              })}
-            </div>
-          </section>
+        {/* Tab switcher */}
+        {dataNets.length > 0 && streamNets.length > 0 && (
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit mx-auto">
+            {(['data','streaming'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${tab === t ? 'bg-white text-black shadow-sm' : 'text-gray-500'}`}>
+                {t === 'data' ? 'Data Bundles' : 'Streaming'}
+              </button>
+            ))}
+          </div>
         )}
 
-        {/* Streaming */}
-        {streamNets.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-lg font-bold text-black mb-4">Streaming & Subscriptions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {streamNets.map(n => {
-                const c = COLORS[n.code] || COLORS.netflix
-                const range = priceRange(n.id)
-                return (
-                  <a key={n.id} href={`/detail/${n.code}`}
-                    className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition press">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 leading-tight text-center"
-                      style={{ background: c.bg, color: c.text }}>
-                      {n.name.length > 6 ? n.name.substring(0, 5) : n.name}
+        {/* Network Grid */}
+        {activeNets.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeNets.map(n => {
+              const b = BRAND[n.code] || { bg: '#111', text: '#fff', short: n.name.slice(0, 3).toUpperCase() }
+              const range = priceRange(n.id)
+              const count = planCount(n.id)
+              return (
+                <a key={n.id} href={`/detail/${n.code}`}
+                  className="flex items-center gap-4 border border-gray-200 rounded-2xl p-4 hover:border-gray-400 hover:shadow-sm transition-all press bg-white">
+                  {n.logo_url ? (
+                    <img src={n.logo_url} alt={n.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[11px] font-black flex-shrink-0 leading-none"
+                      style={{ background: b.bg, color: b.text }}>
+                      {b.short}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-black">{n.name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{range || 'Coming soon'}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-black truncate">{n.name}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {range ? range : 'Coming soon'}
+                      {count > 0 && <span className="text-gray-300"> · {count} plans</span>}
                     </div>
-                    <div className="text-sm font-bold text-blue-600">Buy Now →</div>
-                  </a>
-                )
-              })}
-            </div>
-          </section>
+                  </div>
+                  <div className="text-xs font-bold text-blue-600 whitespace-nowrap">Buy →</div>
+                </a>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-center text-gray-300 py-16 text-sm">No products available yet.</p>
         )}
 
-        {dataNets.length === 0 && streamNets.length === 0 && (
-          <div className="text-center py-16 text-gray-400 text-sm">No products available yet.</div>
-        )}
+        {/* Why us */}
+        <div className="mt-16 grid grid-cols-3 gap-4 text-center">
+          {[
+            { icon: '⚡', label: 'Instant', sub: 'Data sent in seconds' },
+            { icon: '🔒', label: 'Secure', sub: 'Powered by Paystack' },
+            { icon: '📞', label: 'Support', sub: 'WhatsApp anytime' },
+          ].map(x => (
+            <div key={x.label} className="py-6 px-3 rounded-2xl bg-gray-50">
+              <div className="text-2xl mb-1">{x.icon}</div>
+              <div className="text-sm font-bold text-black">{x.label}</div>
+              <div className="text-[11px] text-gray-400 mt-0.5">{x.sub}</div>
+            </div>
+          ))}
+        </div>
 
         {/* Footer */}
         <footer className="border-t border-gray-100 pt-8 mt-12">
           <div className="flex flex-col sm:flex-row justify-between gap-6">
             <div>
-              <div className="mb-1"><span className="font-extrabold text-black">Chale</span><span className="font-extrabold text-blue-600">Data</span></div>
-              <p className="text-xs text-gray-400">For support: <a href="tel:0533547740" className="text-black font-medium">0533547740</a></p>
+              <div className="mb-1">
+                <span className="font-extrabold text-black">Chale</span>
+                <span className="font-extrabold text-blue-600">Data</span>
+              </div>
+              <p className="text-xs text-gray-400">Support: <a href="tel:0533547740" className="text-black font-medium">0533547740</a></p>
             </div>
             <div className="flex gap-6 text-xs text-gray-400">
               <a href="/" className="hover:text-black transition">Home</a>
