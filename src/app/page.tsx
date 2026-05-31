@@ -2,26 +2,35 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${n.toFixed(2)}`
-
-const BRAND: Record<string, { bg: string; text: string; short: string }> = {
-  mtn:        { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
-  mtninstant: { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
-  telecel:    { bg: '#CC0000', text: '#fff',     short: 'TEL' },
-  at:         { bg: '#0033A0', text: '#fff',     short: 'AT'  },
-  airteltigo: { bg: '#0033A0', text: '#fff',     short: 'AT'  },
-  netflix:    { bg: '#E50914', text: '#fff',     short: 'NF'  },
-  applemusic: { bg: '#FC3C44', text: '#fff',     short: 'AM'  },
-  appletv:    { bg: '#000000', text: '#fff',     short: 'TV'  },
-  applegames: { bg: '#0070C9', text: '#fff',     short: 'AG'  },
-  icloud:     { bg: '#3693F5', text: '#fff',     short: 'iCL' },
-  amazon:     { bg: '#00A8E1', text: '#fff',     short: 'AMZ' },
-}
-
 const DATA_TYPES = ['mtn','mtninstant','telecel','at','airteltigo']
 const STREAM_TYPES = ['netflix','applemusic','appletv','applegames','icloud','amazon']
+
+function NetworkIcon({ code, name, logoUrl }: { code: string; name: string; logoUrl?: string | null }) {
+  const logo = logoUrl || NETWORK_LOGOS[code]
+  const b = BRAND[code] || { bg: '#111', text: '#fff', short: code.slice(0, 3).toUpperCase() }
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={name}
+        className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+      />
+    )
+  }
+  return (
+    <div
+      className="w-12 h-12 rounded-xl flex items-center justify-center text-[11px] font-black flex-shrink-0 leading-none"
+      style={{ background: b.bg, color: b.text }}
+    >
+      {b.short}
+    </div>
+  )
+}
 
 export default function Home() {
   const [networks, setNetworks] = useState<Network[]>([])
@@ -76,7 +85,7 @@ export default function Home() {
         <div className="flex items-center gap-5">
           <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition">Track Order</a>
           <a href="https://wa.me/233533547740" target="_blank"
-            className="text-[13px] bg-[#25D366] text-white px-3 py-1.5 rounded-lg font-medium transition hover:opacity-90">
+            className="text-[13px] bg-[#25D366] text-white px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition">
             WhatsApp
           </a>
         </div>
@@ -96,7 +105,7 @@ export default function Home() {
         {/* Tab switcher */}
         {dataNets.length > 0 && streamNets.length > 0 && (
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit mx-auto">
-            {(['data','streaming'] as const).map(t => (
+            {(['data', 'streaming'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${tab === t ? 'bg-white text-black shadow-sm' : 'text-gray-500'}`}>
                 {t === 'data' ? 'Data Bundles' : 'Streaming'}
@@ -109,24 +118,16 @@ export default function Home() {
         {activeNets.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {activeNets.map(n => {
-              const b = BRAND[n.code] || { bg: '#111', text: '#fff', short: n.name.slice(0, 3).toUpperCase() }
               const range = priceRange(n.id)
               const count = planCount(n.id)
               return (
                 <a key={n.id} href={`/detail/${n.code}`}
                   className="flex items-center gap-4 border border-gray-200 rounded-2xl p-4 hover:border-gray-400 hover:shadow-sm transition-all press bg-white">
-                  {n.logo_url ? (
-                    <img src={n.logo_url} alt={n.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[11px] font-black flex-shrink-0 leading-none"
-                      style={{ background: b.bg, color: b.text }}>
-                      {b.short}
-                    </div>
-                  )}
+                  <NetworkIcon code={n.code} name={n.name} logoUrl={n.logo_url} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-black truncate">{n.name}</div>
                     <div className="text-xs text-gray-400 mt-0.5">
-                      {range ? range : 'Coming soon'}
+                      {range || 'Coming soon'}
                       {count > 0 && <span className="text-gray-300"> · {count} plans</span>}
                     </div>
                   </div>

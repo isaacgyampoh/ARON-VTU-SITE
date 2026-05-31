@@ -2,22 +2,24 @@
 
 import { useState, useEffect, use } from 'react'
 import { supabase } from '@/lib/supabase'
+import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${n.toFixed(2)}`
 
-const BRAND: Record<string, { bg: string; text: string; short: string }> = {
-  mtn:        { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
-  mtninstant: { bg: '#FFCC00', text: '#1a1a1a', short: 'MTN' },
-  telecel:    { bg: '#CC0000', text: '#fff',     short: 'TEL' },
-  at:         { bg: '#0033A0', text: '#fff',     short: 'AT'  },
-  airteltigo: { bg: '#0033A0', text: '#fff',     short: 'AT'  },
-  netflix:    { bg: '#E50914', text: '#fff',     short: 'NF'  },
-  applemusic: { bg: '#FC3C44', text: '#fff',     short: 'AM'  },
-  appletv:    { bg: '#000000', text: '#fff',     short: 'TV'  },
-  applegames: { bg: '#0070C9', text: '#fff',     short: 'AG'  },
-  icloud:     { bg: '#3693F5', text: '#fff',     short: 'iCL' },
-  amazon:     { bg: '#00A8E1', text: '#fff',     short: 'AMZ' },
+function NetworkIcon({ code, name, logoUrl, size = 'md' }: { code: string; name: string; logoUrl?: string | null; size?: 'md' | 'lg' }) {
+  const logo = logoUrl || NETWORK_LOGOS[code]
+  const b = BRAND[code] || { bg: '#111', text: '#fff', short: code.slice(0, 3).toUpperCase() }
+  const cls = size === 'lg' ? 'w-14 h-14 rounded-2xl' : 'w-12 h-12 rounded-xl'
+  if (logo) {
+    return <img src={logo} alt={name} className={`${cls} object-cover flex-shrink-0`} />
+  }
+  return (
+    <div className={`${cls} flex items-center justify-center text-[11px] font-black flex-shrink-0 leading-none`}
+      style={{ background: b.bg, color: b.text }}>
+      {b.short}
+    </div>
+  )
 }
 
 export default function DetailPage({ params }: { params: Promise<{ code: string }> }) {
@@ -128,17 +130,10 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
         </div>
       </nav>
 
-      <div className="max-w-lg mx-auto px-4 pb-32">
+      <div className="max-w-lg mx-auto px-4 pb-36">
         {/* Product header */}
         <div className="flex items-center gap-4 my-6">
-          {network.logo_url ? (
-            <img src={network.logo_url} alt={network.name} className="w-14 h-14 rounded-2xl object-cover" />
-          ) : (
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[11px] font-black flex-shrink-0"
-              style={{ background: b.bg, color: b.text }}>
-              {b.short}
-            </div>
-          )}
+          <NetworkIcon code={code} name={network.name} logoUrl={network.logo_url} size="lg" />
           <div>
             <h1 className="text-lg font-bold text-black">{network.name}</h1>
             <p className="text-xs text-gray-400">{plans.length > 0 ? `${plans.length} plans available` : 'No plans yet'}</p>
@@ -148,9 +143,11 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
         {/* Phone */}
         <div className="mb-5">
           <label className="text-xs font-semibold text-gray-500 mb-1.5 block uppercase tracking-wide">Phone Number</label>
-          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+          <input
+            type="tel" value={phone} onChange={e => setPhone(e.target.value)}
             placeholder="024 000 0000" inputMode="numeric"
-            className="w-full h-13 px-4 py-3.5 bg-gray-50 rounded-xl text-[16px] font-medium border border-gray-200 focus:outline-none focus:border-black focus:bg-white transition" />
+            className="w-full h-13 px-4 py-3.5 bg-gray-50 rounded-xl text-[16px] font-medium border border-gray-200 focus:outline-none focus:border-black focus:bg-white transition"
+          />
         </div>
 
         {/* Plans */}
@@ -189,9 +186,9 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
         </div>
       </div>
 
-      {/* Sticky pay button */}
+      {/* Sticky pay bar */}
       {selected && phoneOk && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 fade-up">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-6 fade-up">
           <div className="max-w-lg mx-auto">
             <div className="flex justify-between text-xs text-gray-400 mb-2 px-1">
               <span>{selected.data_amount} · {selected.validity}</span>
@@ -201,11 +198,10 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
               className="w-full h-12 text-white rounded-xl text-sm font-bold press transition disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ background: b.bg, color: b.text }}>
               {paying
-                ? <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />Processing...</>
-                : `Pay ${GHS(selected.selling_price)} via MoMo`
-              }
+                ? <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin inline-block" /> Processing...</>
+                : `Pay ${GHS(selected.selling_price)} via MoMo`}
             </button>
-            <p className="text-center text-[11px] text-gray-300 mt-2">Secured by Paystack</p>
+            <p className="text-center text-[11px] text-gray-300 mt-2">Secured by Paystack · Mobile Money only</p>
           </div>
         </div>
       )}
