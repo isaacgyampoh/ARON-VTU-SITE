@@ -84,7 +84,7 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
             <p className="text-[11px] text-gray-300 font-mono mb-6">{result.order}</p>
             <p className="text-[12px] text-gray-400 mb-7">
               Questions?{' '}
-              <a href="https://wa.me/233533547740" target="_blank" className="text-black font-semibold underline underline-offset-2">
+              <a href="https://wa.me/233555097247" target="_blank" className="text-black font-semibold underline underline-offset-2">
                 Chat with us on WhatsApp
               </a>
             </p>

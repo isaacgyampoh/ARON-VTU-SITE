@@ -76,9 +76,13 @@ export default function Home() {
             <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition-colors">
               Track Order
             </a>
-            <a href="https://wa.me/233533547740" target="_blank"
-              className="h-8 px-3 rounded-lg text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            <a href="https://wa.me/233555097247" target="_blank"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: '#25D366' }}>
+              {/* Official WhatsApp icon */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12.001 2C6.478 2 2 6.478 2 12c0 1.846.502 3.574 1.37 5.063L2 22l5.09-1.33A9.956 9.956 0 0012.001 22C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm0 1.8A8.2 8.2 0 0120.2 12a8.2 8.2 0 01-8.199 8.2 8.167 8.167 0 01-4.17-1.14l-.299-.18-3.1.81.828-3.02-.196-.31A8.164 8.164 0 013.8 12 8.2 8.2 0 0112.001 3.8zm-2.425 4.4c-.198 0-.52.074-.793.37-.272.296-1.04 1.016-1.04 2.479s1.064 2.876 1.213 3.074c.149.198 2.051 3.274 5.063 4.461.708.271 1.26.433 1.69.555.71.2 1.357.172 1.868.104.57-.076 1.754-.717 2.002-1.41.247-.692.247-1.285.173-1.41-.074-.123-.272-.197-.57-.346-.298-.149-1.755-.866-2.027-.966-.272-.099-.47-.148-.669.149-.198.297-.768.966-.942 1.164-.173.198-.347.223-.644.074-.298-.148-1.258-.464-2.397-1.48-.886-.79-1.485-1.766-1.659-2.063-.173-.298-.018-.459.13-.607.134-.134.298-.347.447-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.074-.149-.669-1.613-.916-2.208-.24-.578-.486-.5-.669-.51a12.17 12.17 0 00-.572-.01z"/>
+              </svg>
               WhatsApp
             </a>
           </div>
@@ -166,8 +170,8 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-2.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Support</span>
-                <a href="https://wa.me/233533547740" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
-                <a href="tel:0533547740" className="text-gray-500 hover:text-black transition-colors">0533547740</a>
+                <a href="https://wa.me/233555097247" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
+                <a href="tel:0555097247" className="text-gray-500 hover:text-black transition-colors">0555097247</a>
               </div>
             </div>
 
