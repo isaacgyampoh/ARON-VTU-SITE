@@ -1,30 +1,14 @@
 @import "tailwindcss";
 
-:root {
-  --brand: #0f172a;
-  --blue: #2563eb;
-  --blue-light: #3b82f6;
-  --blue-dark: #1d4ed8;
-  --surface: #f8fafc;
-  --card: #ffffff;
-}
-
 * { -webkit-tap-highlight-color: transparent; }
 
 body {
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: var(--surface);
+  background: #fff;
+  color: #111;
 }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-
-.fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-.scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.35s ease; }
 .press:active { transform: scale(0.98); }
-
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; }

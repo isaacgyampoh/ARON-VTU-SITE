@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { label: 'Dashboard', href: '/admin', icon: '📊' },
-  { label: 'Bundles', href: '/admin/bundles', icon: '📦' },
-  { label: 'Vendors', href: '/admin/vendors', icon: '🔌' },
-  { label: 'Orders', href: '/admin/orders', icon: '📋' },
-  { label: 'Customers', href: '/admin/customers', icon: '👥' },
+  { label: 'Dashboard', href: '/admin' },
+  { label: 'Bundles', href: '/admin/bundles' },
+  { label: 'Vendors', href: '/admin/vendors' },
+  { label: 'Orders', href: '/admin/orders' },
+  { label: 'Customers', href: '/admin/customers' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,54 +22,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [])
 
   function login() {
-    if (pass === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || pass === 'chaledata2026') {
+    if (pass === 'chaledata2026') {
       setAuthed(true)
       sessionStorage.setItem('admin_auth', 'true')
     }
   }
 
   if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-xs text-center fade-up">
-        <div className="mb-6">
-          <span className="text-xl font-extrabold text-slate-900">Chale</span>
-          <span className="text-xl font-extrabold text-blue-600">Data</span>
-          <div className="text-xs text-slate-400 mt-1">Admin Panel</div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-xs">
+        <div className="text-center mb-6">
+          <span className="text-lg font-extrabold text-black">Chale</span>
+          <span className="text-lg font-extrabold text-blue-600">Data</span>
+          <p className="text-xs text-gray-400 mt-1">Admin</p>
         </div>
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} placeholder="Enter password"
-          className="w-full h-12 px-4 border-2 border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-blue-500 mb-3" />
-        <button onClick={login} className="w-full h-12 bg-slate-900 text-white rounded-2xl font-semibold press hover:bg-slate-800 transition">Login</button>
+        <input type="password" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} placeholder="Password"
+          className="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm mb-3 focus:outline-none focus:border-black" />
+        <button onClick={login} className="w-full h-11 bg-black text-white rounded-lg text-sm font-semibold press">Login</button>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-4 h-14 flex items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <span className="font-extrabold text-slate-900">Chale</span>
-          <span className="font-extrabold text-blue-600">Data</span>
-          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">Admin</span>
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200 px-4">
+        <div className="max-w-6xl mx-auto h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-black text-sm">Chale</span>
+            <span className="font-extrabold text-blue-600 text-sm">Data</span>
+            <span className="text-[10px] text-gray-400 font-medium">Admin</span>
+          </div>
+          <a href="/" className="text-xs text-gray-400 hover:text-black transition">View Site →</a>
         </div>
-        <a href="/" className="text-xs text-blue-600 font-semibold hover:text-blue-700">← View Site</a>
       </div>
-      <div className="max-w-7xl mx-auto flex">
-        <aside className="hidden md:block w-52 p-3 pt-4">
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200 px-4 overflow-x-auto">
+        <div className="max-w-6xl mx-auto flex gap-1 -mb-px">
           {NAV.map(n => (
-            <Link key={n.href} href={n.href} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium mb-1 transition ${pathname === n.href ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <span>{n.icon}</span>{n.label}
-            </Link>
-          ))}
-        </aside>
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex justify-around h-14 px-1">
-          {NAV.map(n => (
-            <Link key={n.href} href={n.href} className={`flex flex-col items-center justify-center gap-0.5 text-[9px] font-medium min-w-0 ${pathname === n.href ? 'text-blue-600' : 'text-slate-400'}`}>
-              <span className="text-base">{n.icon}</span>{n.label}
+            <Link key={n.href} href={n.href}
+              className={`px-4 py-3 text-xs font-medium border-b-2 transition whitespace-nowrap ${pathname === n.href ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+              {n.label}
             </Link>
           ))}
         </div>
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">{children}</main>
       </div>
+      <main className="max-w-6xl mx-auto p-4">{children}</main>
     </div>
   )
 }

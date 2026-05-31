@@ -5,194 +5,153 @@ import { supabase } from '@/lib/supabase'
 import type { Network, DataPlan } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵ ${n.toFixed(2)}`
+const DATA_CODES = ['mtn', 'telecel', 'at', 'mtninstant', 'airteltigo']
+const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 
-const DATA_CODES = ['mtn', 'telecel', 'at']
-const STREAMING_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
-
-const NET_STYLE: Record<string, { icon: string; gradient: string }> = {
-  mtn: { icon: '🟡', gradient: 'from-[#ffcb05] to-[#e6b800]' },
-  telecel: { icon: '🔴', gradient: 'from-[#e60000] to-[#cc0000]' },
-  at: { icon: '🔵', gradient: 'from-[#003eb3] to-[#002d80]' },
-  netflix: { icon: '🎬', gradient: 'from-[#e50914] to-[#b20710]' },
-  applemusic: { icon: '🎵', gradient: 'from-[#fa2d48] to-[#a834eb]' },
-  appletv: { icon: '📺', gradient: 'from-[#2d2d2d] to-[#1a1a1a]' },
-  applegames: { icon: '🎮', gradient: 'from-[#0070c9] to-[#00549e]' },
-  icloud: { icon: '☁️', gradient: 'from-[#3693f5] to-[#2176d6]' },
-  amazon: { icon: '📦', gradient: 'from-[#00a8e1] to-[#0077b5]' },
+const COLORS: Record<string, { bg: string; text: string }> = {
+  mtn: { bg: '#ffcb05', text: '#003366' },
+  mtninstant: { bg: '#ffcb05', text: '#003366' },
+  telecel: { bg: '#e60000', text: '#fff' },
+  at: { bg: '#003eb3', text: '#fff' },
+  airteltigo: { bg: '#003eb3', text: '#fff' },
+  netflix: { bg: '#e50914', text: '#fff' },
+  applemusic: { bg: '#fa2d48', text: '#fff' },
+  appletv: { bg: '#1a1a1a', text: '#fff' },
+  applegames: { bg: '#0070c9', text: '#fff' },
+  icloud: { bg: '#3693f5', text: '#fff' },
+  amazon: { bg: '#00a8e1', text: '#fff' },
 }
 
 export default function Home() {
   const [networks, setNetworks] = useState<Network[]>([])
   const [plans, setPlans] = useState<DataPlan[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     async function load() {
-      try {
-        const { data: nets, error: nErr } = await supabase.from('networks').select('*').eq('is_active', true).order('name')
-        if (nErr) { setError(nErr.message); setLoading(false); return }
-        
-        const { data: pls, error: pErr } = await supabase.from('data_plans').select('*').eq('is_active', true).order('selling_price')
-        if (pErr) { setError(pErr.message); setLoading(false); return }
-        
-        setNetworks(nets || [])
-        setPlans(pls || [])
-      } catch (e: any) {
-        setError(e.message)
-      }
+      const [{ data: n }, { data: p }] = await Promise.all([
+        supabase.from('networks').select('*').eq('is_active', true).order('name'),
+        supabase.from('data_plans').select('*').eq('is_active', true).order('selling_price'),
+      ])
+      setNetworks(n || [])
+      setPlans(p || [])
       setLoading(false)
     }
     load()
   }, [])
 
-  // Determine type by code — works even without 'type' column
-  const dataNetworks = networks.filter(n => DATA_CODES.includes(n.code))
-  const streamingNetworks = networks.filter(n => STREAMING_CODES.includes(n.code))
+  const dataNets = networks.filter(n => DATA_CODES.includes(n.code))
+  const streamNets = networks.filter(n => STREAM_CODES.includes(n.code))
 
-  function getPriceRange(networkId: string) {
-    const netPlans = plans.filter(p => p.network_id === networkId)
-    if (netPlans.length === 0) return null
-    const min = Math.min(...netPlans.map(p => p.selling_price))
-    const max = Math.max(...netPlans.map(p => p.selling_price))
+  function priceRange(id: string) {
+    const p = plans.filter(x => x.network_id === id)
+    if (!p.length) return null
+    const min = Math.min(...p.map(x => x.selling_price))
+    const max = Math.max(...p.map(x => x.selling_price))
     return min === max ? GHS(min) : `${GHS(min)} - ${GHS(max)}`
-  }
-
-  function getPlanCount(networkId: string) {
-    return plans.filter(p => p.network_id === networkId).length
   }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center fade-up">
-        <div className="mb-3"><span className="text-xl font-extrabold text-slate-900">Chale</span><span className="text-xl font-extrabold text-blue-600">Data</span></div>
-        <div className="w-7 h-7 border-[2.5px] border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-      </div>
+      <div className="w-6 h-6 border-2 border-gray-200 border-t-black rounded-full animate-spin" />
     </div>
   )
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="px-4 h-16 flex items-center justify-between max-w-3xl mx-auto">
-        <div><span className="text-lg font-extrabold text-slate-900">Chale</span><span className="text-lg font-extrabold text-blue-600">Data</span></div>
-        <a href="/order" className="text-xs font-semibold text-slate-400 hover:text-blue-600 transition">Track Order</a>
-      </header>
-
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 mx-4 rounded-3xl p-6 pb-7 mb-8 max-w-3xl sm:mx-auto relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #3b82f6 0%, transparent 50%), radial-gradient(circle at 80% 20%, #60a5fa 0%, transparent 40%)' }} />
-        <div className="relative">
-          <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur px-3 py-1 rounded-full mb-4">
-            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-            <span className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wider">Instant Delivery</span>
-          </div>
-          <h1 className="text-white text-[22px] font-extrabold leading-tight mb-2">Buy Data &<br />Streaming Instantly.</h1>
-          <p className="text-blue-200/60 text-xs leading-relaxed">MTN · Telecel · AirtelTigo · Netflix · Apple & more<br />No signup. No wallet. Just pay and go.</p>
+      {/* Nav */}
+      <nav className="h-14 px-4 flex items-center justify-between max-w-4xl mx-auto">
+        <a href="/" className="flex items-center gap-1">
+          <span className="text-base font-extrabold text-black tracking-tight">Chale</span>
+          <span className="text-base font-extrabold text-blue-600 tracking-tight">Data</span>
+        </a>
+        <div className="flex items-center gap-5">
+          <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition">Track Order</a>
+          <a href="https://wa.me/233533547740" target="_blank" className="text-[13px] text-gray-500 hover:text-black transition">Contact</a>
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-3xl mx-auto px-4 pb-20">
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-sm text-red-700">
-            Error loading products: {error}
-          </div>
-        )}
+      <div className="max-w-4xl mx-auto px-4 pb-16">
+        {/* Hero — simple, not flashy */}
+        <div className="py-8 text-center">
+          <h1 className="text-[28px] md:text-4xl font-extrabold text-black leading-tight">Buy Data & Streaming<br />Plans Instantly</h1>
+          <p className="text-gray-400 text-sm mt-3 max-w-md mx-auto">Select a product below, enter your number, and pay with MoMo. Your data arrives in seconds.</p>
+        </div>
 
         {/* Data Products */}
-        {dataNetworks.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 bg-blue-600 rounded-full" />
-              <h2 className="text-base font-extrabold text-slate-900">Data Bundles</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {dataNetworks.map(n => {
-                const s = NET_STYLE[n.code] || NET_STYLE.mtn
-                const range = getPriceRange(n.id)
-                const count = getPlanCount(n.id)
+        {dataNets.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-lg font-bold text-black mb-4">Data Bundles</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {dataNets.map(n => {
+                const c = COLORS[n.code] || COLORS.mtn
+                const range = priceRange(n.id)
+                const count = plans.filter(p => p.network_id === n.id).length
                 return (
-                  <a key={n.code} href={`/detail/${n.code}`}
-                    className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 press group">
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-2xl shadow-sm flex-shrink-0`}>
-                      {s.icon}
+                  <a key={n.id} href={`/detail/${n.code}`}
+                    className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition press">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-extrabold flex-shrink-0"
+                      style={{ background: c.bg, color: c.text }}>
+                      {n.name.substring(0, 3).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">{n.name}</div>
-                      {range ? (
-                        <div className="text-xs text-slate-400 mt-0.5">{range}</div>
-                      ) : (
-                        <div className="text-xs text-slate-300 mt-0.5">Coming soon</div>
-                      )}
-                      {count > 0 && <div className="text-[10px] text-slate-300 mt-0.5">{count} plans</div>}
+                      <div className="text-sm font-bold text-black">{n.name}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{range || 'Coming soon'}{count > 0 ? ` · ${count} plans` : ''}</div>
                     </div>
-                    <svg width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 group-hover:stroke-blue-500 transition"><path d="M9 18l6-6-6-6"/></svg>
+                    <div className="text-sm font-bold text-blue-600">Buy Now →</div>
                   </a>
                 )
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Streaming Products */}
-        {streamingNetworks.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 bg-purple-500 rounded-full" />
-              <h2 className="text-base font-extrabold text-slate-900">Streaming & Subscriptions</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {streamingNetworks.map(n => {
-                const s = NET_STYLE[n.code] || NET_STYLE.netflix
-                const range = getPriceRange(n.id)
-                const count = getPlanCount(n.id)
+        {/* Streaming */}
+        {streamNets.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-lg font-bold text-black mb-4">Streaming & Subscriptions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {streamNets.map(n => {
+                const c = COLORS[n.code] || COLORS.netflix
+                const range = priceRange(n.id)
                 return (
-                  <a key={n.code} href={`/detail/${n.code}`}
-                    className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 press group">
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-2xl shadow-sm flex-shrink-0`}>
-                      {s.icon}
+                  <a key={n.id} href={`/detail/${n.code}`}
+                    className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition press">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 leading-tight text-center"
+                      style={{ background: c.bg, color: c.text }}>
+                      {n.name.length > 6 ? n.name.substring(0, 5) : n.name}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition">{n.name}</div>
-                      {range ? (
-                        <div className="text-xs text-slate-400 mt-0.5">{range}</div>
-                      ) : (
-                        <div className="text-xs text-slate-300 mt-0.5">Coming soon</div>
-                      )}
-                      {count > 0 && <div className="text-[10px] text-slate-300 mt-0.5">{count} plans</div>}
+                      <div className="text-sm font-bold text-black">{n.name}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{range || 'Coming soon'}</div>
                     </div>
-                    <svg width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 group-hover:stroke-purple-500 transition"><path d="M9 18l6-6-6-6"/></svg>
+                    <div className="text-sm font-bold text-blue-600">Buy Now →</div>
                   </a>
                 )
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* No products */}
-        {dataNetworks.length === 0 && streamingNetworks.length === 0 && !error && (
-          <div className="text-center py-16">
-            <div className="text-4xl mb-3">📡</div>
-            <p className="text-sm text-slate-500 mb-1">No products available yet.</p>
-            <p className="text-xs text-slate-400">Add products in the <a href="/admin" className="text-blue-600 font-semibold hover:underline">admin panel</a>.</p>
-          </div>
+        {dataNets.length === 0 && streamNets.length === 0 && (
+          <div className="text-center py-16 text-gray-400 text-sm">No products available yet.</div>
         )}
 
         {/* Footer */}
-        <div className="mt-16 pt-6 border-t border-slate-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <footer className="border-t border-gray-100 pt-8 mt-12">
+          <div className="flex flex-col sm:flex-row justify-between gap-6">
             <div>
-              <div className="mb-1"><span className="text-sm font-extrabold text-slate-900">Chale</span><span className="text-sm font-extrabold text-blue-600">Data</span></div>
-              <p className="text-[11px] text-slate-400">Affordable data & streaming. Instant delivery.</p>
+              <div className="mb-1"><span className="font-extrabold text-black">Chale</span><span className="font-extrabold text-blue-600">Data</span></div>
+              <p className="text-xs text-gray-400">For support: <a href="tel:0533547740" className="text-black font-medium">0533547740</a></p>
             </div>
-            <div className="flex items-center gap-4 text-[11px] text-slate-400">
-              <a href="/order" className="hover:text-blue-600 transition">Track Order</a>
-              <a href="https://wa.me/233533547740" target="_blank" className="hover:text-emerald-600 transition">WhatsApp</a>
+            <div className="flex gap-6 text-xs text-gray-400">
+              <a href="/" className="hover:text-black transition">Home</a>
+              <a href="/order" className="hover:text-black transition">Track Order</a>
+              <a href="https://wa.me/233533547740" target="_blank" className="hover:text-black transition">WhatsApp</a>
             </div>
           </div>
-          <p className="text-[10px] text-slate-300 mt-4">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
-        </div>
+          <p className="text-[10px] text-gray-300 mt-6">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
+        </footer>
       </div>
     </div>
   )
