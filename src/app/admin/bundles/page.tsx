@@ -6,6 +6,10 @@ import type { Network, DataPlan } from '@/lib/types'
 
 const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 const DURATION_PRESETS = ['1 Month', '2 Months', '3 Months', '6 Months', '1 Year']
+const GB_SIZES = [
+  '1GB','2GB','3GB','4GB','5GB','6GB','7GB','8GB','10GB',
+  '15GB','20GB','25GB','30GB','40GB','50GB','75GB','100GB','150GB','200GB'
+]
 
 function isStreaming(networks: Network[], networkId: string) {
   const net = networks.find(n => n.id === networkId)
@@ -166,26 +170,25 @@ export default function BundlesPage() {
                 </>
               ) : (
                 /* ── Data bundle fields ── */
-                <>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Plan Name</label>
-                    <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })}
-                      placeholder="e.g. 1GB Daily"
-                      className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Data Size</label>
+                  <div className="grid grid-cols-4 gap-1.5 mb-2">
+                    {GB_SIZES.map(gb => (
+                      <button key={gb} type="button"
+                        onClick={() => setEditing({ ...editing, data_amount: gb, name: gb, validity: 'Non-Expiry' })}
+                        className={`h-9 rounded-lg text-xs font-bold border transition ${
+                          editing.data_amount === gb
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                        }`}>
+                        {gb}
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Data Amount</label>
-                    <input value={editing.data_amount || ''} onChange={e => setEditing({ ...editing, data_amount: e.target.value })}
-                      placeholder="e.g. 1GB"
-                      className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Validity</label>
-                    <input value={editing.validity || ''} onChange={e => setEditing({ ...editing, validity: e.target.value })}
-                      placeholder="e.g. 30 days"
-                      className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
-                  </div>
-                </>
+                  {editing.data_amount && (
+                    <p className="text-xs text-blue-600 font-semibold px-1">Selected: {editing.data_amount}</p>
+                  )}
+                </div>
               )}
 
               {/* Price — always shown */}
