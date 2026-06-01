@@ -1,21 +1,35 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-inter',
+})
+
 export const metadata: Metadata = {
-  title: 'ChaleData — Buy Data Instantly',
-  description: 'Buy cheap data bundles for MTN, Telecel & AirtelTigo. Fast checkout, instant delivery across Ghana.',
+  title: 'ChaleData — Buy Data & Streaming Instantly',
+  description: 'Buy cheap data bundles for MTN, Telecel & AirtelTigo. Netflix, Amazon Prime streaming plans. Fast checkout, instant delivery across Ghana.',
+  keywords: 'MTN data Ghana, Telecel data, AirtelTigo data, Netflix Ghana, buy data online Ghana, MoMo payment',
+  openGraph: {
+    title: 'ChaleData — Buy Data Instantly',
+    description: 'Fast data & streaming plans for Ghana. Pay with MoMo.',
+    type: 'website',
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <script src="https://js.paystack.co/v2/inline.js" defer></script>
-      </head>
-      <body>{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans">{children}</body>
     </html>
   )
 }

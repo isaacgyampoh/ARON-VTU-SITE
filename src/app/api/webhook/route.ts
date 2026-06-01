@@ -5,6 +5,8 @@ import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
+
+  // Verify Paystack signature
   const hash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
     .update(body)
@@ -19,55 +21,56 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   }
 
-  const pd = event.data
-  const ref = pd.reference
+  const ref = event.data.reference
   const sb = createServiceClient()
 
-  // Find order by paystack ref
-  const { data: order } = await sb.from('orders').select('*').eq('paystack_ref', ref).single()
+  // Find order
+  const { data: order } = await sb
+    .from('orders')
+    .select('*')
+    .eq('paystack_ref', ref)
+    .single()
+
   if (!order) {
-    console.error('Webhook: order not found for ref', ref)
+    console.error('[webhook] order not found for ref:', ref)
     return NextResponse.json({ received: true })
   }
 
+  // Idempotency — skip if already processed
   if (order.payment_status === 'paid') {
     return NextResponse.json({ received: true, note: 'already processed' })
   }
 
-  // Mark as paid
-  await sb.from('orders').update({
-    payment_status: 'paid',
-    paid_at: new Date().toISOString(),
-  }).eq('id', order.id)
+  // Mark paid + upsert customer in one go (parallel)
+  await Promise.all([
+    sb.from('orders').update({
+      payment_status: 'paid',
+      paid_at: new Date().toISOString(),
+    }).eq('id', order.id),
 
-  // Update customer record
-  await sb.from('customers').upsert({
-    phone: order.phone,
-    network: order.network,
-    total_purchases: 1,
-    total_spent: order.amount,
-    last_purchase_at: new Date().toISOString(),
-  }, {
-    onConflict: 'phone',
-  })
+    sb.rpc('upsert_customer_stats', {
+      p_phone: order.phone,
+      p_network: order.network,
+      p_amount: order.amount,
+    }).then(({ error }) => {
+      if (error) {
+        // Fallback: manual upsert if RPC doesn't exist yet
+        return sb.from('customers').upsert({
+          phone: order.phone,
+          network: order.network,
+          total_purchases: 1,
+          total_spent: Number(order.amount),
+          last_purchase_at: new Date().toISOString(),
+        }, { onConflict: 'phone', ignoreDuplicates: false })
+      }
+    }),
+  ])
 
-  // Increment existing customer stats
-  const { data: cust } = await sb.from('customers').select('*').eq('phone', order.phone).single()
-  if (cust) {
-    await sb.from('customers').update({
-      total_purchases: (cust.total_purchases || 0) + 1,
-      total_spent: Number(cust.total_spent || 0) + Number(order.amount),
-      last_purchase_at: new Date().toISOString(),
-      network: order.network,
-    }).eq('phone', order.phone)
-  }
-
-  // Fulfill via vendor API
-  try {
-    await fulfillOrder(order.id)
-  } catch (e) {
-    console.error('Vendor fulfillment error:', e)
-  }
+  // Fire vendor fulfillment — don't await (respond to Paystack immediately)
+  // Vercel Edge keeps the process alive via waitUntil if available
+  fulfillOrder(order.id).catch(e =>
+    console.error('[webhook] fulfillment error:', e)
+  )
 
   return NextResponse.json({ success: true })
 }

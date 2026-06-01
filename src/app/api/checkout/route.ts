@@ -10,11 +10,13 @@ export async function POST(req: NextRequest) {
 
   // Clean phone → always 233XXXXXXXXX format
   const cleanPhone = phone
-    .replace(/\s+/g, '')
-    .replace(/^\+/, '')
-    .replace(/^0/, '233')
+    .replace(/\s+/g, '')      // remove spaces
+    .replace(/^\+233/, '233') // +233XX → 233XX
+    .replace(/^\+/, '')       // other +XX
+    .replace(/^0/, '233')     // 0XX → 233XX
 
-  if (cleanPhone.length < 12) {
+  // Must be 12 digits: 233 + 9-digit number
+  if (!/^233\d{9}$/.test(cleanPhone)) {
     return NextResponse.json({ error: 'Invalid phone number. Use format: 024 000 0000' }, { status: 400 })
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
+import Script from 'next/script'
 import { supabase } from '@/lib/supabase'
 import { BRAND, NETWORK_LOGOS } from '@/lib/network-logos'
 import type { Network, DataPlan } from '@/lib/types'
@@ -146,6 +147,7 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
 
   return (
     <div className="min-h-screen bg-white">
+      <Script src="https://js.paystack.co/v2/inline.js" strategy="lazyOnload" />
 
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-40 bg-white border-b border-gray-100">
