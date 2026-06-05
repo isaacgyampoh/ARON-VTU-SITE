@@ -13,10 +13,18 @@ export const metadata: Metadata = {
   title: 'ChaleData — Buy Data & Streaming Instantly',
   description: 'Buy cheap data bundles for MTN, Telecel & AirtelTigo. Netflix, Amazon Prime streaming plans. Fast checkout, instant delivery across Ghana.',
   keywords: 'MTN data Ghana, Telecel data, AirtelTigo data, Netflix Ghana, buy data online Ghana, MoMo payment',
+  metadataBase: new URL('https://chaledata.com'),
   openGraph: {
     title: 'ChaleData — Buy Data Instantly',
     description: 'Fast data & streaming plans for Ghana. Pay with MoMo.',
     type: 'website',
+    url: 'https://chaledata.com',
+    siteName: 'ChaleData',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'ChaleData — Buy Data Instantly',
+    description: 'Fast data & streaming plans for Ghana. Pay with MoMo.',
   },
 }
 
