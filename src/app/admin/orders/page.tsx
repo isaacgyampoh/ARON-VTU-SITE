@@ -20,6 +20,20 @@ export default function OrdersPage() {
     setLoading(false)
   }
 
+  async function fixAllStuck() {
+    if (!confirm('Fix all stuck paid orders and missing customers?')) return
+    setActing('all')
+    const res = await fetch('/api/admin/fix-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: 'all', adminPassword: 'chaledata2026' }),
+    })
+    const data = await res.json()
+    alert(data.message || `Fixed ${data.fixed} of ${data.total} stuck orders`)
+    setActing(null)
+    load()
+  }
+
   async function retry(id: string) {
     setActing(id)
     const res = await fetch('/api/vendor?action=retry', {
@@ -93,7 +107,13 @@ export default function OrdersPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold text-slate-900">Orders</h1>
-        <button onClick={exportCSV} className="h-9 px-4 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">Export CSV</button>
+        <div className="flex gap-2">
+          <button onClick={fixAllStuck} disabled={acting === 'all'}
+            className="h-9 px-4 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition disabled:opacity-50">
+            {acting === 'all' ? 'Fixing...' : 'Fix Stuck Orders'}
+          </button>
+          <button onClick={exportCSV} className="h-9 px-4 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">Export CSV</button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1">

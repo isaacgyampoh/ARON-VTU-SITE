@@ -2,7 +2,11 @@ import { createServiceClient } from './supabase'
 
 export async function getActiveVendor() {
   const sb = createServiceClient()
-  const { data } = await sb.from('vendor_apis').select('*').eq('is_active', true).limit(1)
+  const { data } = await sb
+    .from('vendor_apis')
+    .select('*')
+    .eq('is_active', true)
+    .limit(1)
   return data?.[0] || null
 }
 
@@ -23,7 +27,6 @@ export async function callVendorApi(order: {
   }
   if (vendor.api_key) headers['Authorization'] = `Bearer ${vendor.api_key}`
 
-  // Build request body — use vendor's request_format as template or default
   const body = vendor.request_format && Object.keys(vendor.request_format).length > 0
     ? Object.fromEntries(
         Object.entries(vendor.request_format).map(([k, v]) => [
@@ -33,7 +36,7 @@ export async function callVendorApi(order: {
             .replace('{network}', order.network)
             .replace('{plan}', order.vendor_plan_id || order.plan_name)
             .replace('{amount}', String(order.amount))
-            .replace('{data}', order.data_amount)
+            .replace('{data}', order.data_amount),
         ])
       )
     : {
@@ -51,6 +54,7 @@ export async function callVendorApi(order: {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000), // 10s timeout
     })
     const data = await res.json()
     return {
@@ -68,10 +72,26 @@ export async function callVendorApi(order: {
   }
 }
 
-export async function fulfillOrder(orderId: string, maxRetries = 3) {
+export async function fulfillOrder(orderId: string, maxRetries = 2) {
   const sb = createServiceClient()
-  const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single()
+  const { data: order } = await sb
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single()
+
   if (!order) return { success: false, error: 'Order not found' }
+
+  // Skip vendor for streaming — mark success immediately for manual fulfillment
+  const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+  if (STREAMING.includes(order.network)) {
+    await sb.from('orders').update({
+      vendor_status: 'manual_required',
+      vendor_api_used: 'manual',
+      vendor_response: { note: 'Streaming — requires manual fulfillment' },
+    }).eq('id', orderId)
+    return { success: true, manual: true }
+  }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const result = await callVendorApi({
@@ -83,7 +103,7 @@ export async function fulfillOrder(orderId: string, maxRetries = 3) {
     })
 
     await sb.from('orders').update({
-      vendor_status: result.success ? 'success' : 'failed',
+      vendor_status: result.success ? 'success' : (attempt === maxRetries ? 'failed' : 'pending'),
       vendor_response: result,
       vendor_api_used: result.vendor_name || 'unknown',
       retry_count: attempt,
@@ -92,8 +112,8 @@ export async function fulfillOrder(orderId: string, maxRetries = 3) {
 
     if (result.success) return result
 
-    // Wait before retry
-    if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt))
+    // Short wait between retries — keep under Vercel's 30s limit
+    if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1500))
   }
 
   return { success: false, error: 'All retries exhausted' }
