@@ -1,7 +1,7 @@
 import { createServiceClient } from './supabase'
 
 const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
-const API_KEY = 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO'
+const API_KEY = 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8'
 const BASE_URL = 'https://www.xpresportal.app/api/v1'
 
 // Network slug in URL path (case-insensitive per docs, using lowercase)
