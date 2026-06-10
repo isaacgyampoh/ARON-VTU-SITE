@@ -176,6 +176,16 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
           )}
         </div>
 
+        {/* ── AFA notice ── */}
+        {code === 'mtnafa' && (
+          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
+            <p className="text-[13px] font-bold text-amber-800 mb-1">Ghana Card Required</p>
+            <p className="text-[12px] text-amber-700 leading-relaxed">
+              After payment, we will WhatsApp you to collect your Ghana Card ID and complete your AFA registration.
+            </p>
+          </div>
+        )}
+
         {/* ── Plan selector: grid for data, list for streaming ── */}
         {plans.length > 0 && (() => {
           const isStream = STREAM_CODES.includes(code)
