@@ -29,6 +29,8 @@ function apiHeaders() {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'x-api-key': API_KEY,
+    'Origin': 'https://chaledata.com',
+    'Referer': 'https://chaledata.com/',
   }
 }
 
