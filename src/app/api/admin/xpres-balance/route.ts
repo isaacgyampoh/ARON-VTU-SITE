@@ -4,8 +4,8 @@ export async function GET() {
   try {
     const res = await fetch('https://www.xpresportal.app/api/v1/balance', {
       headers: {
-        'Authorization': 'Bearer dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO',
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-api-key': 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO',
       },
       signal: AbortSignal.timeout(8000),
       cache: 'no-store',
