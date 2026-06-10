@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   const sb = createServiceClient()
 
-  // Get plan + network info
+  // Get plan
   const { data: plan, error: planErr } = await sb
     .from('data_plans')
     .select('*, networks(name, code, type)')
@@ -40,24 +40,41 @@ export async function POST(req: NextRequest) {
   const ref     = 'PAY-' + orderNo
   const amountPesewas = Math.round(Number(plan.selling_price) * 100)
 
-  const { data: order, error } = await sb.from('orders').insert({
+  // Only insert columns that definitely exist in the orders table
+  const orderData: Record<string, any> = {
     order_no:       orderNo,
     phone:          cleanPhone,
     network,
     plan_name:      plan.name,
     data_amount:    plan.data_amount,
     amount:         plan.selling_price,
-    cost_price:     plan.cost_price,
-    profit:         plan.selling_price - plan.cost_price,
+    cost_price:     plan.cost_price || 0,
+    profit:         (plan.selling_price || 0) - (plan.cost_price || 0),
     paystack_ref:   ref,
     payment_status: 'pending',
     vendor_status:  'pending',
-    vendor_plan_id: plan.vendor_plan_id || null,  // passed to xpresportal
-  }).select().single()
+  }
+
+  // Conditionally add vendor_plan_id only if it has a value
+  // (avoids error if column doesn't exist in DB yet)
+  if (plan.vendor_plan_id) {
+    orderData.vendor_plan_id = plan.vendor_plan_id
+  }
+
+  const { data: order, error } = await sb
+    .from('orders')
+    .insert(orderData)
+    .select()
+    .single()
 
   if (error) {
-    console.error('Order insert error:', error)
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+    console.error('Order insert error:', JSON.stringify(error))
+    // Return the actual DB error so you can see what's wrong
+    return NextResponse.json({
+      error: 'Failed to create order',
+      detail: error.message,
+      code: error.code,
+    }, { status: 500 })
   }
 
   return NextResponse.json({
