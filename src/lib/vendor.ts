@@ -4,17 +4,17 @@ const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', '
 const API_KEY = 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO'
 const BASE_URL = 'https://www.xpresportal.app/api/v1'
 
-// xpresportal network slugs (used in URL path)
+// Network slug in URL path (case-insensitive per docs, using lowercase)
 const NETWORK_SLUG: Record<string, string> = {
-  mtn:        'MTN',
-  mtninstant: 'MTN',
-  mtnafa:     'MTN',
-  telecel:    'Telecel',
-  at:         'AirtelTigo',
-  airteltigo: 'AirtelTigo',
+  mtn:        'mtn',
+  mtninstant: 'mtn',
+  mtnafa:     'mtn',
+  telecel:    'telecel',
+  at:         'airteltigo',
+  airteltigo: 'airteltigo',
 }
 
-// offerSlug per network (from GET /offers response)
+// offerSlug per network (from GET /offers)
 const OFFER_SLUG: Record<string, string> = {
   mtn:        'mtn_data_bundle',
   mtninstant: 'mtn_data_bundle',
@@ -24,7 +24,7 @@ const OFFER_SLUG: Record<string, string> = {
   airteltigo: 'airteltigo_data_bundle',
 }
 
-function headers() {
+function apiHeaders() {
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -32,21 +32,11 @@ function headers() {
   }
 }
 
-// ── GET /offers ─────────────────────────────────────────────────────
-export async function fetchXpresOffers() {
-  const res = await fetch(`${BASE_URL}/offers`, {
-    headers: headers(),
-    signal: AbortSignal.timeout(8000),
-    cache: 'no-store',
-  })
-  return res.json()
-}
-
-// ── GET /balance ─────────────────────────────────────────────────────
+// ── GET /balance ────────────────────────────────────────────────────
 export async function checkXpresBalance() {
   try {
     const res = await fetch(`${BASE_URL}/balance`, {
-      headers: headers(),
+      headers: apiHeaders(),
       signal: AbortSignal.timeout(8000),
       cache: 'no-store',
     })
@@ -58,50 +48,68 @@ export async function checkXpresBalance() {
   }
 }
 
-// ── POST /order/{network} — Place an order ──────────────────────────
+// ── GET /offers ─────────────────────────────────────────────────────
+export async function fetchXpresOffers() {
+  const res = await fetch(`${BASE_URL}/offers`, {
+    headers: apiHeaders(),
+    signal: AbortSignal.timeout(8000),
+    cache: 'no-store',
+  })
+  return res.json()
+}
+
+// ── POST /order/:network ─────────────────────────────────────────────
 async function xpresPurchase(order: {
-  phone: string
+  phone: string        // stored as 233XXXXXXXXX in DB
   network: string
-  data_amount: string
+  data_amount: string  // e.g. "5GB"
   vendor_plan_id?: string
-  amount: number
   order_no: string
 }) {
-  const networkSlug = NETWORK_SLUG[order.network] || order.network
-  const offerSlug = OFFER_SLUG[order.network] || 'mtn_data_bundle'
+  const networkSlug = NETWORK_SLUG[order.network] || order.network.toLowerCase()
+  const offerSlug   = OFFER_SLUG[order.network]   || 'mtn_data_bundle'
 
-  // Strip 233 prefix → local 0XX format
-  const localPhone = order.phone.replace(/^233/, '0')
+  // phone already stored as 233XXXXXXXXX — xpresportal wants this format
+  const phone = order.phone.startsWith('233')
+    ? order.phone
+    : order.phone.replace(/^0/, '233')
 
-  // Volume = numeric GB value e.g. "5GB" → 5
-  const volumeStr = order.vendor_plan_id || order.data_amount
-  const volume = parseInt(volumeStr.replace(/[^0-9]/g, ''), 10)
+  // volume = numeric GB e.g. "5GB" → 2, "10GB" → 10
+  const rawVol = order.vendor_plan_id || order.data_amount
+  const volume = parseInt(rawVol.replace(/[^0-9]/g, ''), 10)
 
   const body = {
-    offer_slug: offerSlug,
-    phone: localPhone,
-    volume,
-    reference: order.order_no,
+    type:       'single',
+    volume:     String(volume),   // docs show volume as string "2"
+    phone,
+    offerSlug,
+    metadata: {
+      idempotencyKey: order.order_no,
+    },
   }
 
   console.log(`[xpres] POST /order/${networkSlug}`, JSON.stringify(body))
 
   const res = await fetch(`${BASE_URL}/order/${networkSlug}`, {
     method: 'POST',
-    headers: headers(),
+    headers: apiHeaders(),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   })
 
   const data = await res.json()
-  console.log('[xpres] response:', JSON.stringify(data))
+  console.log('[xpres] response status:', res.status, JSON.stringify(data))
 
-  const success = res.ok && (data.success === true || data.status === true || data.status === 'success')
+  // 201 Created = success per docs
+  const success = (res.status === 201 || res.ok) && data.success === true
 
   return {
     success,
-    status: res.status,
+    httpStatus: res.status,
     vendor_name: 'xpresportal',
+    orderId: data.orderId,
+    xpresReference: data.reference,
+    xpresStatus: data.status,
     response: data,
     error: success ? null : (data.message || data.error || `HTTP ${res.status}`),
   }
@@ -118,33 +126,33 @@ export async function fulfillOrder(orderId: string, maxRetries = 2) {
 
   if (!order) return { success: false, error: 'Order not found' }
 
-  // Streaming → mark manual, skip vendor
+  // Streaming → manual fulfillment, no vendor API call
   if (STREAMING.includes(order.network)) {
     await sb.from('orders').update({
-      vendor_status: 'manual_required',
+      vendor_status:   'manual_required',
       vendor_api_used: 'manual',
-      vendor_response: { note: 'Streaming subscription — fulfil manually' },
+      vendor_response: { note: 'Streaming subscription — fulfil manually via WhatsApp' },
     }).eq('id', orderId)
     return { success: true, manual: true }
   }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const result = await xpresPurchase({
-      phone: order.phone,
-      network: order.network,
-      data_amount: order.data_amount,
+      phone:         order.phone,
+      network:       order.network,
+      data_amount:   order.data_amount,
       vendor_plan_id: order.vendor_plan_id,
-      amount: order.amount,
-      order_no: order.order_no,
+      order_no:      order.order_no,
     })
 
     const isFinal = attempt === maxRetries
+
     await sb.from('orders').update({
-      vendor_status: result.success ? 'success' : (isFinal ? 'failed' : 'pending'),
+      vendor_status:   result.success ? 'success' : (isFinal ? 'failed' : 'pending'),
       vendor_response: result.response,
       vendor_api_used: 'xpresportal',
-      retry_count: attempt,
-      fulfilled_at: result.success ? new Date().toISOString() : null,
+      retry_count:     attempt,
+      fulfilled_at:    result.success ? new Date().toISOString() : null,
     }).eq('id', orderId)
 
     if (result.success) return result
