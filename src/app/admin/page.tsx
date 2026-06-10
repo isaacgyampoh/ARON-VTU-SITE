@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null)
+  const [balance, setBalance] = useState<{ loading: boolean; value: number | null; error?: string }>({ loading: false, value: null })
 
   useEffect(() => { load() }, [])
 
@@ -21,18 +22,33 @@ export default function AdminDashboard() {
     const profit = (orders || []).reduce((a, o) => a + Number(o.profit), 0)
     const fulfilled = (orders || []).filter(o => o.vendor_status === 'success').length
     const failed = (orders || []).filter(o => o.vendor_status === 'failed').length
-
-    // Today's revenue
     const todayRevenue = (orders || []).filter(o => o.created_at?.startsWith(today)).reduce((a, o) => a + Number(o.amount), 0)
-
-    // Top networks
     const netMap: Record<string, number> = {}
     ;(orders || []).forEach(o => { netMap[o.network] = (netMap[o.network] || 0) + 1 })
 
     setStats({ totalOrders, todayOrders, revenue, profit, todayRevenue, customers, fulfilled, failed, netMap })
   }
 
-  if (!stats) return <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" /></div>
+  async function checkBalance() {
+    setBalance({ loading: true, value: null })
+    try {
+      const res = await fetch('/api/admin/xpres-balance')
+      const data = await res.json()
+      if (data.success) {
+        setBalance({ loading: false, value: data.balance })
+      } else {
+        setBalance({ loading: false, value: null, error: data.error || 'Failed to fetch balance' })
+      }
+    } catch (e: any) {
+      setBalance({ loading: false, value: null, error: e.message })
+    }
+  }
+
+  if (!stats) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-6 h-6 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+    </div>
+  )
 
   const cards = [
     { label: 'Total Orders', value: stats.totalOrders || 0, color: 'bg-blue-50 text-blue-700' },
@@ -47,7 +63,33 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-lg font-bold text-slate-900 mb-4">Dashboard</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold text-slate-900">Dashboard</h1>
+        <button onClick={() => window.location.reload()} className="text-xs text-slate-400 hover:text-slate-600">Refresh</button>
+      </div>
+
+      {/* Xpresportal balance widget */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5 flex items-center justify-between">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Xpresportal Wallet</div>
+          {balance.loading && <div className="text-sm text-slate-400">Checking...</div>}
+          {balance.value !== null && !balance.loading && (
+            <div className={`text-xl font-bold ${balance.value < 10 ? 'text-red-600' : 'text-green-600'}`}>
+              GHS {balance.value.toFixed(2)}
+              {balance.value < 10 && <span className="text-xs ml-2 font-normal text-red-500">⚠ Low balance — top up now</span>}
+            </div>
+          )}
+          {balance.error && <div className="text-xs text-red-500">{balance.error}</div>}
+          {balance.value === null && !balance.loading && !balance.error && (
+            <div className="text-sm text-slate-400">Click to check</div>
+          )}
+        </div>
+        <button onClick={checkBalance} disabled={balance.loading}
+          className="h-9 px-4 bg-slate-900 text-white rounded-lg text-xs font-semibold disabled:opacity-50 hover:bg-slate-700 transition">
+          {balance.loading ? 'Checking...' : 'Check Balance'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {cards.map(c => (
           <div key={c.label} className={`${c.color} rounded-xl p-4`}>

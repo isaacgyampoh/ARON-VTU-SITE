@@ -1,77 +1,100 @@
 import { createServiceClient } from './supabase'
 
-export async function getActiveVendor() {
-  const sb = createServiceClient()
-  const { data } = await sb
-    .from('vendor_apis')
-    .select('*')
-    .eq('is_active', true)
-    .limit(1)
-  return data?.[0] || null
+const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+
+// ── Xpresportal network codes ──────────────────────────────────────
+const XPRES_NETWORK_MAP: Record<string, string> = {
+  mtn:        'MTN',
+  mtninstant: 'MTN',
+  mtnafa:     'MTN',
+  telecel:    'TELECEL',
+  at:         'AT',
+  airteltigo: 'AT',
 }
 
-export async function callVendorApi(order: {
+// ── Main Xpresportal data purchase ─────────────────────────────────
+async function xpresPurchase(order: {
   phone: string
   network: string
-  plan_name: string
   data_amount: string
   vendor_plan_id?: string
   amount: number
+  order_no: string
 }) {
-  const vendor = await getActiveVendor()
-  if (!vendor) return { success: false, error: 'No active vendor API configured' }
+  const apiKey = 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO'
+  const baseUrl = 'https://www.xpresportal.app/api/v1'
+  const network = XPRES_NETWORK_MAP[order.network] || order.network.toUpperCase()
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(vendor.headers || {}),
+  // Strip leading 233 → local 0XX format for xpresportal
+  const localPhone = order.phone.replace(/^233/, '0')
+
+  const body = {
+    network,
+    phone: localPhone,
+    data_plan: order.vendor_plan_id || order.data_amount,
+    reference: order.order_no,
   }
-  if (vendor.api_key) headers['Authorization'] = `Bearer ${vendor.api_key}`
 
-  const body = vendor.request_format && Object.keys(vendor.request_format).length > 0
-    ? Object.fromEntries(
-        Object.entries(vendor.request_format).map(([k, v]) => [
-          k,
-          String(v)
-            .replace('{phone}', order.phone)
-            .replace('{network}', order.network)
-            .replace('{plan}', order.vendor_plan_id || order.plan_name)
-            .replace('{amount}', String(order.amount))
-            .replace('{data}', order.data_amount),
-        ])
-      )
-    : {
-        phone: order.phone,
-        network: order.network,
-        plan_id: order.vendor_plan_id || order.plan_name,
-        amount: order.amount,
-        data_amount: order.data_amount,
-      }
+  console.log('[xpres] purchasing:', JSON.stringify(body))
 
-  const url = `${vendor.base_url.replace(/\/$/, '')}${vendor.purchase_endpoint}`
+  const res = await fetch(`${baseUrl}/data/purchase`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  })
 
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(10000), // 10s timeout
-    })
-    const data = await res.json()
-    return {
-      success: res.ok,
-      status: res.status,
-      vendor_name: vendor.name,
-      response: data,
-    }
-  } catch (e: any) {
-    return {
-      success: false,
-      vendor_name: vendor.name,
-      error: e.message,
-    }
+  const data = await res.json()
+  console.log('[xpres] response:', JSON.stringify(data))
+
+  // xpresportal returns {status: true/false, message: '...', data: {...}}
+  const success = res.ok && (data.status === true || data.success === true || data.status === 'success')
+
+  return {
+    success,
+    status: res.status,
+    vendor_name: 'xpresportal',
+    response: data,
+    error: success ? null : (data.message || data.error || `HTTP ${res.status}`),
   }
 }
 
+// ── Check wallet balance ────────────────────────────────────────────
+export async function checkXpresBalance(): Promise<{ balance: number; success: boolean; raw: any }> {
+  const apiKey = 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO'
+  try {
+    const res = await fetch('https://www.xpresportal.app/api/v1/balance', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    })
+    const data = await res.json()
+    const balance = data.balance ?? data.wallet_balance ?? data.data?.balance ?? 0
+    return { success: res.ok, balance: Number(balance), raw: data }
+  } catch (e: any) {
+    return { success: false, balance: 0, raw: { error: e.message } }
+  }
+}
+
+// ── Fetch available data plans from xpresportal ────────────────────
+export async function fetchXpresPlans(network: string): Promise<any[]> {
+  const apiKey = 'dk_llwYpusSIJLT7CpDBqQeUiLVQRymxTPO'
+  const net = XPRES_NETWORK_MAP[network] || network.toUpperCase()
+  try {
+    const res = await fetch(`https://www.xpresportal.app/api/v1/data/plans?network=${net}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    })
+    const data = await res.json()
+    return data.data || data.plans || data || []
+  } catch {
+    return []
+  }
+}
+
+// ── Fulfill one order ──────────────────────────────────────────────
 export async function fulfillOrder(orderId: string, maxRetries = 2) {
   const sb = createServiceClient()
   const { data: order } = await sb
@@ -82,38 +105,39 @@ export async function fulfillOrder(orderId: string, maxRetries = 2) {
 
   if (!order) return { success: false, error: 'Order not found' }
 
-  // Skip vendor for streaming — mark success immediately for manual fulfillment
-  const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+  // Streaming — manual fulfillment, flag it
   if (STREAMING.includes(order.network)) {
     await sb.from('orders').update({
       vendor_status: 'manual_required',
       vendor_api_used: 'manual',
-      vendor_response: { note: 'Streaming — requires manual fulfillment' },
+      vendor_response: { note: 'Streaming subscription — fulfil manually' },
     }).eq('id', orderId)
     return { success: true, manual: true }
   }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const result = await callVendorApi({
+    const result = await xpresPurchase({
       phone: order.phone,
       network: order.network,
-      plan_name: order.plan_name,
       data_amount: order.data_amount,
+      vendor_plan_id: order.vendor_plan_id,
       amount: order.amount,
+      order_no: order.order_no,
     })
 
+    const isFinal = attempt === maxRetries
     await sb.from('orders').update({
-      vendor_status: result.success ? 'success' : (attempt === maxRetries ? 'failed' : 'pending'),
-      vendor_response: result,
-      vendor_api_used: result.vendor_name || 'unknown',
+      vendor_status: result.success ? 'success' : (isFinal ? 'failed' : 'pending'),
+      vendor_response: result.response,
+      vendor_api_used: 'xpresportal',
       retry_count: attempt,
       fulfilled_at: result.success ? new Date().toISOString() : null,
     }).eq('id', orderId)
 
     if (result.success) return result
 
-    // Short wait between retries — keep under Vercel's 30s limit
-    if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1500))
+    console.error(`[xpres] attempt ${attempt} failed:`, result.error)
+    if (!isFinal) await new Promise(r => setTimeout(r, 1500))
   }
 
   return { success: false, error: 'All retries exhausted' }
