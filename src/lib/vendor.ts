@@ -1,6 +1,7 @@
 import { createServiceClient } from './supabase'
 
 const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+const MANUAL_PRODUCTS = ['mtnafa'] // AFA requires registration with Ghana Card — manual fulfillment
 const API_KEY = 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8'
 const BASE_URL = 'https://www.xpresportal.app/api/v1'
 
@@ -135,12 +136,15 @@ export async function fulfillOrder(orderId: string, maxRetries = 2) {
 
   if (!order) return { success: false, error: 'Order not found' }
 
-  // Streaming → manual fulfillment, no vendor API call
-  if (STREAMING.includes(order.network)) {
+  // Streaming + AFA → manual fulfillment, no vendor API call
+  if (STREAMING.includes(order.network) || MANUAL_PRODUCTS.includes(order.network)) {
+    const note = MANUAL_PRODUCTS.includes(order.network)
+      ? 'MTN AFA Registration — requires customer Ghana Card ID. Contact customer on WhatsApp to collect details.'
+      : 'Streaming subscription — fulfil manually via WhatsApp'
     await sb.from('orders').update({
       vendor_status:   'manual_required',
       vendor_api_used: 'manual',
-      vendor_response: { note: 'Streaming subscription — fulfil manually via WhatsApp' },
+      vendor_response: { note },
     }).eq('id', orderId)
     return { success: true, manual: true }
   }

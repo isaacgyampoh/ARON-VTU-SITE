@@ -158,7 +158,12 @@ export default function OrdersPage() {
             {/* Expanded actions */}
             {expanded === o.id && (
               <div className="border-t border-slate-100 bg-slate-50 px-3 py-2 flex flex-wrap gap-2">
-                {o.vendor_status === 'failed' && o.payment_status === 'paid' && (
+                {o.network === 'mtnafa' && o.payment_status === 'paid' && o.vendor_status !== 'success' && (
+                  <div className="h-8 px-3 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold flex items-center">
+                    ⚠ Needs Ghana Card — register via xpresportal
+                  </div>
+                )}
+                {o.vendor_status === 'failed' && o.payment_status === 'paid' && o.network !== 'mtnafa' && (
                   <button disabled={acting === o.id} onClick={() => retry(o.id)}
                     className="h-8 px-3 bg-blue-600 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
                     {acting === o.id ? 'Retrying...' : 'Retry Vendor'}
