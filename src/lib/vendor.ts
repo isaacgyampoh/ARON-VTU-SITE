@@ -18,7 +18,7 @@ const NETWORK_SLUG: Record<string, string> = {
 const OFFER_SLUG: Record<string, string> = {
   mtn:        'mtn_master_beneficiary_portal',
   mtninstant: 'mtn_express_data',
-  mtnafa:     'mtn_master_beneficiary_portal',
+  mtnafa:     'mtn_express_data',
   telecel:    'telecel_group_share_portal',
   at:         'airteltigo_ishare_portal',
   airteltigo: 'airteltigo_bigtime_portal',
