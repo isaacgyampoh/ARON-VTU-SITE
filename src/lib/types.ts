@@ -55,6 +55,7 @@ export type Order = {
   created_at: string
   paid_at: string | null
   fulfilled_at: string | null
+  vendor_plan_id: string | null
 }
 
 export type Customer = {

@@ -14,7 +14,7 @@ const NETWORK_SLUG: Record<string, string> = {
   airteltigo: 'airteltigo',
 }
 
-// offerSlug per network (from GET /offers)
+// offerSlug per network — all confirmed same pattern
 const OFFER_SLUG: Record<string, string> = {
   mtn:        'mtn_data_bundle',
   mtninstant: 'mtn_data_bundle',
