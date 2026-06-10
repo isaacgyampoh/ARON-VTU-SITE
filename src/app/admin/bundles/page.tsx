@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import type { Network, DataPlan } from '@/lib/types'
 
 const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
+const AFA_CODES = ['mtnafa']
 const DURATION_PRESETS = ['1 Month', '2 Months', '3 Months', '6 Months', '1 Year']
 const GB_SIZES = [
   '1GB','2GB','3GB','4GB','5GB','6GB','7GB','8GB','10GB',
@@ -14,6 +15,11 @@ const GB_SIZES = [
 function isStreaming(networks: Network[], networkId: string) {
   const net = networks.find(n => n.id === networkId)
   return net ? (STREAM_CODES.includes(net.code) || net.type === 'streaming') : false
+}
+
+function isAfa(networks: Network[], networkId: string) {
+  const net = networks.find(n => n.id === networkId)
+  return net ? AFA_CODES.includes(net.code) : false
 }
 
 export default function BundlesPage() {
@@ -41,8 +47,13 @@ export default function BundlesPage() {
     delete data.networks
     // For streaming, set validity = data_amount (e.g. "1 Month")
     const streaming = isStreaming(networks, data.network_id)
+    const afa = isAfa(networks, data.network_id)
     if (streaming && data.data_amount) {
       data.validity = data.data_amount
+    }
+    if (afa) {
+      data.data_amount = 'AFA Registration'
+      data.validity = 'One-time'
     }
     if (id) {
       await supabase.from('data_plans').update(data).eq('id', id)
@@ -126,7 +137,7 @@ export default function BundlesPage() {
           <div className="bg-white rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="font-bold text-slate-900 mb-1">{(editing as any).id ? 'Edit' : 'New'} Plan</h2>
             <p className="text-xs text-slate-400 mb-4">
-              {streaming ? 'Streaming subscription — set duration and price.' : 'Data bundle — set size and price.'}
+              {streaming ? 'Streaming subscription — set duration and price.' : isAfa(networks, editing?.network_id || '') ? 'AFA Registration — set registration fee.' : 'Data bundle — set size and price.'}
             </p>
 
             <div className="space-y-3">
@@ -168,6 +179,17 @@ export default function BundlesPage() {
                       className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
                   </div>
                 </>
+              ) : isAfa(networks, editing?.network_id || '') ? (
+                /* ── AFA Registration fields ── */
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-xs font-bold text-amber-800 mb-1">AFA Registration Product</p>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    This is a one-time registration fee. Customer pays, then you collect their Ghana Card details and register them on xpresportal manually.
+                  </p>
+                  <p className="text-[11px] text-amber-600 mt-2 font-semibold">
+                    Just set the registration fee price below and save.
+                  </p>
+                </div>
               ) : (
                 /* ── Data bundle fields ── */
                 <div>
