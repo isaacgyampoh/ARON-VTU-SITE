@@ -178,10 +178,10 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
 
         {/* ── AFA notice ── */}
         {code === 'mtnafa' && (
-          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
-            <p className="text-[13px] font-bold text-amber-800 mb-1">Ghana Card Required</p>
-            <p className="text-[12px] text-amber-700 leading-relaxed">
-              After payment, we will WhatsApp you to collect your Ghana Card ID and complete your AFA registration.
+          <div className="mb-5 border-l-4 border-black pl-4 py-1">
+            <p className="text-[13px] font-bold text-black mb-0.5">Ghana Card Required</p>
+            <p className="text-[12px] text-gray-500 leading-relaxed">
+              After payment, we'll contact you on WhatsApp to collect your Ghana Card ID and complete your AFA registration.
             </p>
           </div>
         )}
