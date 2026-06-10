@@ -10,7 +10,7 @@ const PRESET_CODES = [
   { code: 'mtnafa', name: 'MTN AFA Bundle', type: 'data' },
   { code: 'telecel', name: 'Telecel Non-Expiry', type: 'data' },
   { code: 'at', name: 'AirtelTigo iShare', type: 'data' },
-  { code: 'airteltigo', name: 'AirtelTigo Big Data', type: 'data' },
+  { code: 'airteltigo', name: 'AirtelTigo BigTime', type: 'data' },
   { code: 'netflix', name: 'Netflix', type: 'streaming' },
   { code: 'applemusic', name: 'Apple Music', type: 'streaming' },
   { code: 'appletv', name: 'Apple TV', type: 'streaming' },

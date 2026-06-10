@@ -4,7 +4,7 @@ const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', '
 const API_KEY = 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8'
 const BASE_URL = 'https://www.xpresportal.app/api/v1'
 
-// Network slug in URL path (case-insensitive per docs, using lowercase)
+// Network slug in URL path
 const NETWORK_SLUG: Record<string, string> = {
   mtn:        'mtn',
   mtninstant: 'mtn',
@@ -14,14 +14,14 @@ const NETWORK_SLUG: Record<string, string> = {
   airteltigo: 'airteltigo',
 }
 
-// offerSlug per network — all confirmed same pattern
+// offerSlug per network — from GET /offers (confirmed live)
 const OFFER_SLUG: Record<string, string> = {
-  mtn:        'mtn_data_bundle',
-  mtninstant: 'mtn_data_bundle',
-  mtnafa:     'mtn_data_bundle',
-  telecel:    'telecel_data_bundle',
-  at:         'airteltigo_data_bundle',
-  airteltigo: 'airteltigo_data_bundle',
+  mtn:        'mtn_master_beneficiary_portal',
+  mtninstant: 'mtn_express_data',
+  mtnafa:     'mtn_master_beneficiary_portal',
+  telecel:    'telecel_group_share_portal',
+  at:         'airteltigo_ishare_portal',
+  airteltigo: 'airteltigo_bigtime_portal',
 }
 
 function apiHeaders() {
@@ -80,9 +80,16 @@ async function xpresPurchase(order: {
   const rawVol = order.vendor_plan_id || order.data_amount
   const volume = parseInt(rawVol.replace(/[^0-9]/g, ''), 10)
 
+  // Validate volume is in allowed range for this offer
+  // MTN Master: [1-100], MTN Express: [1-100], Telecel: [5-100], AT iShare: [1-50], AT BigTime: [20-500]
+  const TELECEL_MIN = 5
+  const finalVolume = (offerSlug === 'telecel_group_share_portal' && volume < TELECEL_MIN)
+    ? TELECEL_MIN
+    : volume
+
   const body = {
     type:       'single',
-    volume:     String(volume),   // docs show volume as string "2"
+    volume:     String(finalVolume),
     phone,
     offerSlug,
     metadata: {
