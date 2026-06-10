@@ -61,7 +61,7 @@ export default function Home() {
             <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition-colors hidden sm:block">
               Track Order
             </a>
-            <a href="https://wa.me/233555097247" target="_blank"
+            <a href="https://wa.me/233558659948" target="_blank"
               className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
               style={{ background: '#25D366' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
@@ -180,8 +180,8 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-2.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Support</span>
-                <a href="https://wa.me/233555097247" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
-                <a href="tel:0555097247" className="text-gray-500 hover:text-black transition-colors">0555097247</a>
+                <a href="https://wa.me/233558659948" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
+                <a href="tel:0558659948" className="text-gray-500 hover:text-black transition-colors">0558659948</a>
               </div>
             </div>
           </div>

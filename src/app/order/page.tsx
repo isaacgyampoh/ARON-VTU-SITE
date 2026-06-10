@@ -93,7 +93,7 @@ export default function OrderPage() {
             <p className="text-[13px] text-gray-300">No orders found for this number.</p>
             <p className="text-[12px] text-gray-300 mt-1">
               Need help?{' '}
-              <a href="https://wa.me/233555097247" target="_blank" className="text-black underline underline-offset-2 font-medium">
+              <a href="https://wa.me/233558659948" target="_blank" className="text-black underline underline-offset-2 font-medium">
                 WhatsApp us
               </a>
             </p>
