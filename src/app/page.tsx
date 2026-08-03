@@ -50,28 +50,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f5f5f7]">
 
-      {/* ── Nav ── */}
+      {/* ── Nav ── the brand carries the header on its own; help and order
+           tracking live in the bottom bar on mobile and the footer elsewhere. */}
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="/" className="flex items-center">
-            <span className="text-[18px] font-black text-black tracking-tight">Chale</span>
-            <span className="text-[18px] font-black text-blue-600 tracking-tight">Data</span>
+        <div className="relative max-w-4xl mx-auto px-4 h-[58px] flex items-center justify-center">
+          <a href="/" className="flex items-center" aria-label="ChaleData home">
+            <span className="text-[21px] font-black text-black tracking-[-0.03em]">Chale</span>
+            <span className="text-[21px] font-black text-blue-600 tracking-[-0.03em]">Data</span>
           </a>
-          <div className="flex items-center gap-4">
-            <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition-colors hidden sm:block">
-              Track Order
-            </a>
-            <a href="https://wa.me/233558659948" target="_blank" rel="noopener noreferrer"
-              aria-label="Chat with us on WhatsApp"
-              className="inline-flex items-center gap-2 h-9 pl-2.5 pr-3.5 rounded-full bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 hover:border-gray-300 hover:text-black transition-colors">
-              <span className="w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#25D366' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="white">
-                  <path d="M12.001 2C6.478 2 2 6.478 2 12c0 1.846.502 3.574 1.37 5.063L2 22l5.09-1.33A9.956 9.956 0 0012.001 22C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm0 1.8A8.2 8.2 0 0120.2 12a8.2 8.2 0 01-8.199 8.2 8.167 8.167 0 01-4.17-1.14l-.299-.18-3.1.81.828-3.02-.196-.31A8.164 8.164 0 013.8 12 8.2 8.2 0 0112.001 3.8zm-2.425 4.4c-.198 0-.52.074-.793.37-.272.296-1.04 1.016-1.04 2.479s1.064 2.876 1.213 3.074c.149.198 2.051 3.274 5.063 4.461.708.271 1.26.433 1.69.555.71.2 1.357.172 1.868.104.57-.076 1.754-.717 2.002-1.41.247-.692.247-1.285.173-1.41-.074-.123-.272-.197-.57-.346-.298-.149-1.755-.866-2.027-.966-.272-.099-.47-.148-.669.149-.198.297-.768.966-.942 1.164-.173.198-.347.223-.644.074-.298-.148-1.258-.464-2.397-1.48-.886-.79-1.485-1.766-1.659-2.063-.173-.298-.018-.459.13-.607.134-.134.298-.347.447-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.074-.149-.669-1.613-.916-2.208-.24-.578-.486-.5-.669-.51a12.17 12.17 0 00-.572-.01z"/>
-                </svg>
-              </span>
-              <span className="hidden xs:inline sm:inline">WhatsApp</span>
-            </a>
-          </div>
+          <a href="/order"
+            className="hidden sm:block absolute right-4 text-[13px] font-medium text-gray-500 hover:text-black transition-colors">
+            Track Order
+          </a>
         </div>
       </nav>
 
@@ -199,45 +189,51 @@ export default function Home() {
         )}
 
         {/* ── Footer ── */}
-        <footer className="mt-20 pt-10 border-t border-gray-200/80">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-9">
+        <footer className="mt-20 pt-12 border-t border-gray-200/80">
 
-            {/* Brand */}
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center mb-2.5">
-                <span className="text-[16px] font-black text-black tracking-tight">Chale</span>
-                <span className="text-[16px] font-black text-blue-600 tracking-tight">Data</span>
+          {/* Brand, centred */}
+          <div className="text-center max-w-sm mx-auto">
+            <div className="flex items-center justify-center mb-3">
+              <span className="text-[19px] font-black text-black tracking-[-0.03em]">Chale</span>
+              <span className="text-[19px] font-black text-blue-600 tracking-[-0.03em]">Data</span>
+            </div>
+            <p className="text-[13px] text-gray-500 leading-relaxed">
+              Data and streaming for Ghana. Pay with mobile money — no account, no sign-up.
+            </p>
+          </div>
+
+          {/* Shop · Good to know · Support */}
+          <div className="mt-11 grid grid-cols-1 sm:grid-cols-3 gap-9 sm:gap-6">
+
+            <div className="text-center sm:text-left">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400 mb-3">Shop</span>
+              <div className="flex flex-col gap-2.5">
+                <a href="/" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Data bundles</a>
+                <a href="/" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Streaming</a>
+                <a href="/order" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Track order</a>
               </div>
-              <p className="text-[12.5px] text-gray-500 leading-relaxed max-w-[210px]">
-                Data and streaming for Ghana. Pay with mobile money, no account needed.
-              </p>
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400">Shop</span>
-              <a href="/" className="text-[13px] text-gray-600 hover:text-black transition-colors">Data bundles</a>
-              <a href="/" className="text-[13px] text-gray-600 hover:text-black transition-colors">Streaming</a>
-              <a href="/order" className="text-[13px] text-gray-600 hover:text-black transition-colors">Track order</a>
+            <div className="text-center">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400 mb-3">Good to know</span>
+              <div className="flex flex-col gap-2.5">
+                <span className="text-[13.5px] text-gray-600 leading-relaxed">MTN delivery can take up to 24 hours</span>
+                <span className="text-[13.5px] text-gray-500">Payments secured by Paystack</span>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400">Support</span>
-              <a href="https://wa.me/233558659948" target="_blank" rel="noopener noreferrer"
-                className="text-[13px] text-gray-600 hover:text-black transition-colors">WhatsApp us</a>
-              <a href="tel:0558659948" className="text-[13px] text-gray-600 hover:text-black transition-colors">055 865 9948</a>
-              <span className="text-[13px] text-gray-400">Mon – Sun, 8am – 9pm</span>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400">Good to know</span>
-              <span className="text-[13px] text-gray-600 leading-relaxed">
-                MTN delivery can take up to 24 hours.
-              </span>
-              <span className="text-[13px] text-gray-400">Payments secured by Paystack.</span>
+            <div className="text-center sm:text-right">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.09em] text-gray-400 mb-3">Support</span>
+              <div className="flex flex-col gap-2.5">
+                <a href="https://wa.me/233558659948" target="_blank" rel="noopener noreferrer"
+                  className="text-[13.5px] text-gray-600 hover:text-black transition-colors">WhatsApp us</a>
+                <a href="tel:0558659948" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">055 865 9948</a>
+                <span className="text-[13.5px] text-gray-500">Mon – Sun, 8am – 9pm</span>
+              </div>
             </div>
           </div>
 
-          <div className="mt-10 pt-6 border-t border-gray-200/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="mt-12 pt-6 border-t border-gray-200/70 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-[11.5px] text-gray-400">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
             <div className="flex items-center gap-2 text-[11.5px] text-gray-400">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
