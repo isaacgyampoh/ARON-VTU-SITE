@@ -61,13 +61,15 @@ export default function Home() {
             <a href="/order" className="text-[13px] text-gray-500 hover:text-black transition-colors hidden sm:block">
               Track Order
             </a>
-            <a href="https://wa.me/233558659948" target="_blank"
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
-              style={{ background: '#25D366' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                <path d="M12.001 2C6.478 2 2 6.478 2 12c0 1.846.502 3.574 1.37 5.063L2 22l5.09-1.33A9.956 9.956 0 0012.001 22C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm0 1.8A8.2 8.2 0 0120.2 12a8.2 8.2 0 01-8.199 8.2 8.167 8.167 0 01-4.17-1.14l-.299-.18-3.1.81.828-3.02-.196-.31A8.164 8.164 0 013.8 12 8.2 8.2 0 0112.001 3.8zm-2.425 4.4c-.198 0-.52.074-.793.37-.272.296-1.04 1.016-1.04 2.479s1.064 2.876 1.213 3.074c.149.198 2.051 3.274 5.063 4.461.708.271 1.26.433 1.69.555.71.2 1.357.172 1.868.104.57-.076 1.754-.717 2.002-1.41.247-.692.247-1.285.173-1.41-.074-.123-.272-.197-.57-.346-.298-.149-1.755-.866-2.027-.966-.272-.099-.47-.148-.669.149-.198.297-.768.966-.942 1.164-.173.198-.347.223-.644.074-.298-.148-1.258-.464-2.397-1.48-.886-.79-1.485-1.766-1.659-2.063-.173-.298-.018-.459.13-.607.134-.134.298-.347.447-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.074-.149-.669-1.613-.916-2.208-.24-.578-.486-.5-.669-.51a12.17 12.17 0 00-.572-.01z"/>
-              </svg>
-              WhatsApp
+            <a href="https://wa.me/233558659948" target="_blank" rel="noopener noreferrer"
+              aria-label="Chat with us on WhatsApp"
+              className="inline-flex items-center gap-2 h-9 pl-2.5 pr-3.5 rounded-full bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 hover:border-gray-300 hover:text-black transition-colors">
+              <span className="w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#25D366' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="white">
+                  <path d="M12.001 2C6.478 2 2 6.478 2 12c0 1.846.502 3.574 1.37 5.063L2 22l5.09-1.33A9.956 9.956 0 0012.001 22C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm0 1.8A8.2 8.2 0 0120.2 12a8.2 8.2 0 01-8.199 8.2 8.167 8.167 0 01-4.17-1.14l-.299-.18-3.1.81.828-3.02-.196-.31A8.164 8.164 0 013.8 12 8.2 8.2 0 0112.001 3.8zm-2.425 4.4c-.198 0-.52.074-.793.37-.272.296-1.04 1.016-1.04 2.479s1.064 2.876 1.213 3.074c.149.198 2.051 3.274 5.063 4.461.708.271 1.26.433 1.69.555.71.2 1.357.172 1.868.104.57-.076 1.754-.717 2.002-1.41.247-.692.247-1.285.173-1.41-.074-.123-.272-.197-.57-.346-.298-.149-1.755-.866-2.027-.966-.272-.099-.47-.148-.669.149-.198.297-.768.966-.942 1.164-.173.198-.347.223-.644.074-.298-.148-1.258-.464-2.397-1.48-.886-.79-1.485-1.766-1.659-2.063-.173-.298-.018-.459.13-.607.134-.134.298-.347.447-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.074-.149-.669-1.613-.916-2.208-.24-.578-.486-.5-.669-.51a12.17 12.17 0 00-.572-.01z"/>
+                </svg>
+              </span>
+              <span className="hidden xs:inline sm:inline">WhatsApp</span>
             </a>
           </div>
         </div>
@@ -76,18 +78,45 @@ export default function Home() {
       <div className="max-w-4xl mx-auto px-4 pb-16">
 
         {/* ── Hero ── */}
-        <div className="pt-10 pb-8 text-center">
-          <h1 className="text-[28px] md:text-[38px] font-black text-black leading-tight tracking-tight">
-            Data &amp; Streaming,<br />Delivered Instantly
+        <div className="pt-12 pb-7 text-center">
+          <h1 className="text-[30px] md:text-[40px] font-black text-black leading-[1.1] tracking-[-0.02em]">
+            Data &amp; Streaming,<br />
+            <span className="text-blue-600">Delivered Fast</span>
           </h1>
-          <p className="text-[14px] text-gray-400 mt-3 max-w-xs mx-auto">
-            Pay with MoMo. Data arrives in seconds.
+          <p className="text-[14.5px] text-gray-500 mt-3.5 max-w-[280px] mx-auto leading-relaxed">
+            Pay with mobile money. No account needed.
+          </p>
+
+          {/* Trust row — people are about to pay, so say what reassures them */}
+          <div className="flex items-center justify-center gap-4 mt-6 text-[11.5px] font-medium text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              Secure payment
+            </span>
+            <span className="w-px h-3 bg-gray-200" />
+            <span className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              Track any order
+            </span>
+          </div>
+        </div>
+
+        {/* ── Delivery notice ── seen before choosing, so nobody orders
+             expecting instant delivery and is disappointed. */}
+        <div className="mb-7 rounded-2xl bg-amber-50 border border-amber-200/70 px-4 py-3.5 flex gap-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0 mt-[1px]"
+            stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" /><path d="M12 8v5" /><path d="M12 16.5v.01" />
+          </svg>
+          <p className="text-[13px] leading-relaxed text-amber-900">
+            <span className="font-bold">MTN delivery can take up to 24 hours.</span>{' '}
+            <span className="text-amber-800">Only order if you can wait.</span>
           </p>
         </div>
 
         {/* ── Tab switcher ── */}
         {dataNets.length > 0 && streamNets.length > 0 && (
-          <div className="flex gap-1 p-1 bg-white rounded-2xl w-fit mx-auto mb-8 shadow-sm">
+          <div className="flex gap-1 p-1 bg-white ring-1 ring-gray-200/70 rounded-2xl w-fit mx-auto mb-7 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
             {(['data', 'streaming'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-6 h-9 rounded-xl text-[13px] font-bold transition-all ${
@@ -110,7 +139,7 @@ export default function Home() {
 
               return (
                 <a key={n.id} href={`/detail/${n.code}`}
-                  className="press group relative overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col">
+                  className="press group relative overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200/70 shadow-[0_1px_2px_rgba(0,0,0,.04)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,.18)] hover:ring-gray-300 hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
 
                   {/* Card image area */}
                   <div className="relative w-full aspect-[4/3] overflow-hidden"
@@ -174,18 +203,18 @@ export default function Home() {
             </div>
             <div className="flex gap-12 text-[13px]">
               <div className="flex flex-col gap-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Platform</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Platform</span>
                 <a href="/" className="text-gray-500 hover:text-black transition-colors">Home</a>
                 <a href="/order" className="text-gray-500 hover:text-black transition-colors">Track Order</a>
               </div>
               <div className="flex flex-col gap-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-300">Support</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Support</span>
                 <a href="https://wa.me/233558659948" target="_blank" className="text-gray-500 hover:text-black transition-colors">WhatsApp</a>
                 <a href="tel:0558659948" className="text-gray-500 hover:text-black transition-colors">0558659948</a>
               </div>
             </div>
           </div>
-          <p className="text-[11px] text-gray-300 mt-8">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
+          <p className="text-[11px] text-gray-400 mt-8">&copy; {new Date().getFullYear()} ChaleData. All rights reserved.</p>
         </footer>
 
       </div>

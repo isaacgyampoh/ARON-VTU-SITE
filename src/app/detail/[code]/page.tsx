@@ -176,6 +176,17 @@ export default function DetailPage({ params }: { params: Promise<{ code: string 
           )}
         </div>
 
+        {/* ── MTN delivery time ── shown on MTN products before choosing a
+             plan, matching the existing notice style. */}
+        {code.startsWith('mtn') && (
+          <div className="mb-5 border-l-4 border-amber-500 pl-4 py-1">
+            <p className="text-[13px] font-bold text-black mb-0.5">Delivery can take up to 24 hours</p>
+            <p className="text-[12px] text-gray-500 leading-relaxed">
+              MTN bundles are not always instant. Only order if you can wait.
+            </p>
+          </div>
+        )}
+
         {/* ── AFA notice ── */}
         {code === 'mtnafa' && (
           <div className="mb-5 border-l-4 border-black pl-4 py-1">
