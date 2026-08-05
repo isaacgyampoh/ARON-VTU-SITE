@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server'
+import { checkXpresBalance } from '@/lib/vendor'
 
+export const runtime = 'nodejs'
+
+/** Wallet balance from whichever vendor is currently configured. */
 export async function GET() {
-  try {
-    const res = await fetch('https://www.xpresportal.app/api/v1/balance', {
-      headers: {
-        'Accept': 'application/json',
-        'x-api-key': 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8',
-      },
-      signal: AbortSignal.timeout(8000),
-      cache: 'no-store',
-    })
-    const data = await res.json()
-    const balance = data.balance ?? data.wallet_balance ?? data.data?.balance ?? 0
-    return NextResponse.json({ success: true, balance: Number(balance), raw: data })
-  } catch (e: any) {
-    return NextResponse.json({ success: false, balance: 0, error: e.message })
-  }
+  const r = await checkXpresBalance()
+  return NextResponse.json({ success: r.success, balance: r.balance, raw: r.raw })
 }

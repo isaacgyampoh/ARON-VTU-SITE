@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server'
+import { fetchXpresOffers } from '@/lib/vendor'
 
+export const runtime = 'nodejs'
+
+/** Offer list from whichever vendor is currently configured. */
 export async function GET() {
   try {
-    const res = await fetch('https://www.xpresportal.app/api/v1/offers', {
-      headers: {
-        'Accept': 'application/json',
-        'x-api-key': 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8',
-        'Origin': 'https://chaledata.com',
-        'Referer': 'https://chaledata.com/',
-      },
-      signal: AbortSignal.timeout(10000),
-      cache: 'no-store',
-    })
-    const data = await res.json()
-    return NextResponse.json({ status: res.status, data })
+    const data = await fetchXpresOffers()
+    return NextResponse.json({ success: true, data })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: e.message })
   }
 }
