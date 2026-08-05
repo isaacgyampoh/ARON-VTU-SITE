@@ -188,6 +188,43 @@ export default function Home() {
           <p className="text-center text-gray-300 py-20 text-sm">No products available yet.</p>
         )}
 
+        {/* ── Cresco Susu teaser ── placed after the products, so it is seen
+             on the way out rather than distracting from a purchase. */}
+        <a href="/cresco"
+          className="press group block mt-14 rounded-2xl overflow-hidden relative"
+          style={{ background: 'linear-gradient(135deg, #07231a, #0d3b2a)' }}>
+          <div aria-hidden className="absolute inset-0" style={{
+            background: 'radial-gradient(90% 120% at 88% 0%, rgba(16,185,129,.22), transparent 62%)',
+          }} />
+          <div className="relative flex items-center gap-4 px-5 py-5">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(155deg, #10b981, #059669)' }}>
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white"
+                strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21V11" />
+                <path d="M12 11c0-3.5 2.6-6.4 6-6.8-.2 3.6-2.7 6.4-6 6.8Z" />
+                <path d="M12 14c-3.1-.3-5.5-2.9-5.7-6.2 3.2.4 5.6 3 5.7 6.2Z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-black text-white tracking-tight">Cresco Susu</span>
+                <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(212,175,55,.16)', color: '#e3c766' }}>Coming soon</span>
+              </div>
+              <p className="text-[12.5px] text-white/55 mt-1 leading-snug">
+                Save today, secure tomorrow. Our rotational savings plan.
+              </p>
+            </div>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:translate-x-0.5"
+              style={{ background: 'rgba(255,255,255,.10)' }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
         {/* ── Footer ── */}
         <footer className="mt-20 pt-12 border-t border-gray-200/80">
 
@@ -211,6 +248,9 @@ export default function Home() {
                 <a href="/" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Data bundles</a>
                 <a href="/" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Streaming</a>
                 <a href="/order" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">Track order</a>
+                <a href="/cresco" className="text-[13.5px] text-gray-600 hover:text-black transition-colors">
+                  Cresco Susu <span className="text-[10px] text-emerald-600 font-semibold">soon</span>
+                </a>
               </div>
             </div>
 
