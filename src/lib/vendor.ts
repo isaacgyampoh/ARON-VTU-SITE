@@ -2,8 +2,36 @@ import { createServiceClient } from './supabase'
 
 const STREAMING = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
 const MANUAL_PRODUCTS = ['mtnafa'] // AFA requires registration with Ghana Card — manual fulfillment
-const API_KEY = 'dk_lUWtHYYDzJAlq-chnnvbdnmSwnSeSVx8'
-const BASE_URL = 'https://www.xpresportal.app/api/v1'
+// Vendor details live in settings so they can be changed from the admin
+// without a code change or redeploy. The environment variables are a fallback
+// for a fresh install; the values saved in the admin always win.
+const FALLBACK_KEY = process.env.VENDOR_API_KEY || ''
+const FALLBACK_URL = process.env.VENDOR_BASE_URL || 'https://www.xpresportal.app/api/v1'
+
+let cached: { key: string; url: string; auto: boolean; at: number } | null = null
+
+async function vendorSettings() {
+  // Cached briefly so a busy checkout does not re-read settings every call.
+  if (cached && Date.now() - cached.at < 30_000) return cached
+  try {
+    const sb = createServiceClient()
+    const { data } = await sb.from('app_settings').select('key, value')
+    const map: Record<string, string> = {}
+    for (const r of data || []) map[r.key] = r.value ?? ''
+    cached = {
+      key: map.vendor_api_key || FALLBACK_KEY,
+      url: (map.vendor_base_url || FALLBACK_URL).replace(/\/$/, ''),
+      auto: (map.auto_fulfil ?? 'on') !== 'off',
+      at: Date.now(),
+    }
+  } catch {
+    cached = { key: FALLBACK_KEY, url: FALLBACK_URL, auto: true, at: Date.now() }
+  }
+  return cached
+}
+
+/** Clear the cache after settings are saved, so changes take effect at once. */
+export function clearVendorCache() { cached = null }
 
 // Network slug in URL path
 const NETWORK_SLUG: Record<string, string> = {
@@ -25,11 +53,11 @@ const OFFER_SLUG: Record<string, string> = {
   airteltigo: 'airteltigo_bigtime_portal',
 }
 
-function apiHeaders() {
+function apiHeaders(key: string) {
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'x-api-key': API_KEY,
+    'x-api-key': key,
     'Origin': 'https://chaledata.com',
     'Referer': 'https://chaledata.com/',
   }
@@ -38,8 +66,9 @@ function apiHeaders() {
 // ── GET /balance ────────────────────────────────────────────────────
 export async function checkXpresBalance() {
   try {
-    const res = await fetch(`${BASE_URL}/balance`, {
-      headers: apiHeaders(),
+    const s = await vendorSettings()
+    const res = await fetch(`${s.url}/balance`, {
+      headers: apiHeaders(s.key),
       signal: AbortSignal.timeout(8000),
       cache: 'no-store',
     })
@@ -53,8 +82,9 @@ export async function checkXpresBalance() {
 
 // ── GET /offers ─────────────────────────────────────────────────────
 export async function fetchXpresOffers() {
-  const res = await fetch(`${BASE_URL}/offers`, {
-    headers: apiHeaders(),
+  const s = await vendorSettings()
+  const res = await fetch(`${s.url}/offers`, {
+    headers: apiHeaders(s.key),
     signal: AbortSignal.timeout(8000),
     cache: 'no-store',
   })
@@ -100,9 +130,10 @@ async function xpresPurchase(order: {
 
   console.log(`[xpres] POST /order/${networkSlug}`, JSON.stringify(body))
 
-  const res = await fetch(`${BASE_URL}/order/${networkSlug}`, {
+  const s = await vendorSettings()
+  const res = await fetch(`${s.url}/order/${networkSlug}`, {
     method: 'POST',
-    headers: apiHeaders(),
+    headers: apiHeaders(s.key),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   })
@@ -135,6 +166,29 @@ export async function fulfillOrder(orderId: string, maxRetries = 2) {
     .single()
 
   if (!order) return { success: false, error: 'Order not found' }
+
+  // Automatic buying switched off → record the order for someone to fulfil by
+  // hand. The customer has still paid; nothing is lost, it simply waits in the
+  // admin with the number and bundle to buy.
+  const settings = await vendorSettings()
+  if (!settings.auto) {
+    await sb.from('orders').update({
+      vendor_status:   'manual_required',
+      vendor_api_used: 'manual',
+      vendor_response: { note: 'Automatic buying is switched off. Buy this bundle manually, then mark the order complete.' },
+    }).eq('id', orderId)
+    return { success: true, manual: true }
+  }
+
+  // No vendor key configured → same as above, rather than failing the order.
+  if (!settings.key) {
+    await sb.from('orders').update({
+      vendor_status:   'manual_required',
+      vendor_api_used: 'manual',
+      vendor_response: { note: 'No vendor API key is set. Buy this bundle manually, then mark the order complete.' },
+    }).eq('id', orderId)
+    return { success: true, manual: true }
+  }
 
   // Streaming + AFA → manual fulfillment, no vendor API call
   if (STREAMING.includes(order.network) || MANUAL_PRODUCTS.includes(order.network)) {

@@ -10,7 +10,37 @@ export default function VendorsPage() {
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<string>('')
 
-  useEffect(() => { load() }, [])
+  // Live vendor settings — which supplier is used, and whether buying is
+  // automatic at all.
+  const [cfg, setCfg] = useState<any>(null)
+  const [form, setForm] = useState({ vendorName: '', baseUrl: '', apiKey: '' })
+  const [savingCfg, setSavingCfg] = useState(false)
+  const [cfgMsg, setCfgMsg] = useState('')
+
+  async function loadCfg() {
+    const d = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null)
+    if (d) { setCfg(d); setForm({ vendorName: d.vendorName || '', baseUrl: d.baseUrl || '', apiKey: '' }) }
+  }
+
+  async function saveCfg(patch: any) {
+    setSavingCfg(true); setCfgMsg('')
+    const d = await fetch('/api/admin/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).then(r => r.json()).catch(() => ({ error: 'failed' }))
+    setSavingCfg(false)
+    setCfgMsg(d.error ? 'Could not save' : 'Saved')
+    setForm(f => ({ ...f, apiKey: '' }))
+    loadCfg()
+  }
+
+  async function testCfg() {
+    setSavingCfg(true); setCfgMsg('Checking…')
+    const d = await fetch('/api/admin/settings', { method: 'PUT' }).then(r => r.json()).catch(() => ({ detail: 'Could not reach the vendor' }))
+    setSavingCfg(false); setCfgMsg(d.detail || '')
+  }
+
+  useEffect(() => { load(); loadCfg() }, [])
 
   async function load() {
     const { data } = await supabase.from('vendor_apis').select('*').order('created_at')
@@ -61,6 +91,69 @@ export default function VendorsPage() {
 
   return (
     <div>
+      {/* ── Supply settings ── */}
+      {cfg && (
+        <div className="mb-6 bg-white rounded-2xl border border-slate-200 p-5">
+          <h2 className="font-bold text-slate-900 mb-1">Where data is bought from</h2>
+          <p className="text-[12.5px] text-slate-500 mb-4">
+            Turn automatic buying off and orders simply wait here with the number and bundle, for you to buy wherever you like.
+          </p>
+
+          {/* On / off */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-4">
+            <div>
+              <div className="text-[13.5px] font-semibold text-slate-900">
+                Automatic buying is {cfg.autoFulfil ? 'ON' : 'OFF'}
+              </div>
+              <div className="text-[12px] text-slate-500 mt-0.5">
+                {cfg.autoFulfil
+                  ? 'Paid orders are sent to the vendor straight away.'
+                  : 'Paid orders wait for you to buy them by hand.'}
+              </div>
+            </div>
+            <button onClick={() => saveCfg({ autoFulfil: !cfg.autoFulfil })} disabled={savingCfg}
+              className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${cfg.autoFulfil ? 'bg-green-500' : 'bg-slate-300'}`}
+              aria-label="Toggle automatic buying">
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${cfg.autoFulfil ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {/* Vendor details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Vendor name</label>
+              <input value={form.vendorName} onChange={e => setForm(f => ({ ...f, vendorName: e.target.value }))}
+                placeholder="e.g. Tera" className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">API address</label>
+              <input value={form.baseUrl} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))}
+                placeholder="https://…/api/v1" className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                API key {cfg.hasKey && <span className="normal-case tracking-normal text-slate-400 font-normal">— currently {cfg.keyPreview}</span>}
+              </label>
+              <input value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
+                placeholder={cfg.hasKey ? 'Leave blank to keep the current key' : 'Paste the new vendor key'}
+                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm font-mono" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-4">
+            <button onClick={() => saveCfg(form)} disabled={savingCfg}
+              className="h-10 px-5 bg-blue-600 text-white rounded-lg text-[13px] font-semibold disabled:opacity-50">
+              {savingCfg ? 'Saving…' : 'Save vendor'}
+            </button>
+            <button onClick={testCfg} disabled={savingCfg}
+              className="h-10 px-5 border border-slate-200 text-slate-700 rounded-lg text-[13px] font-semibold">
+              Test connection
+            </button>
+            {cfgMsg && <span className="text-[12.5px] text-slate-600">{cfgMsg}</span>}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold text-slate-900">Vendor APIs</h1>
         <button onClick={() => setEditing({ is_active: false, status: 'untested', headers: {}, request_format: {}, purchase_endpoint: '/purchase' })} className="h-9 px-4 bg-blue-600 text-white rounded-lg text-xs font-semibold">+ Add Vendor</button>
