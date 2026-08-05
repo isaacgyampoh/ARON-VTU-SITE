@@ -15,6 +15,20 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'data' | 'streaming'>('data')
 
+  // The hero alternates between what we sell today and what is coming, so the
+  // susu gets real exposure without a banner shouting over the shop.
+  const HERO = [
+    { top: 'Data & Streaming,', bottom: 'Delivered Fast', accent: '#2563eb',
+      sub: 'Pay with mobile money. No account needed.' },
+    { top: 'Cresco Susu,', bottom: 'Coming Soon', accent: '#059669',
+      sub: 'Save today, secure tomorrow. Stay tuned.' },
+  ]
+  const [heroIdx, setHeroIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % HERO.length), 4200)
+    return () => clearInterval(t)
+  }, [])
+
   useEffect(() => {
     async function load() {
       const [{ data: n }, { data: p }] = await Promise.all([
@@ -69,13 +83,45 @@ export default function Home() {
 
         {/* ── Hero ── */}
         <div className="pt-12 pb-7 text-center">
-          <h1 className="text-[30px] md:text-[40px] font-black text-black leading-[1.1] tracking-[-0.02em]">
-            Data &amp; Streaming,<br />
-            <span className="text-blue-600">Delivered Fast</span>
-          </h1>
-          <p className="text-[14.5px] text-gray-500 mt-3.5 max-w-[280px] mx-auto leading-relaxed">
-            Pay with mobile money. No account needed.
-          </p>
+          <div className="relative h-[86px] md:h-[104px] overflow-hidden">
+            {HERO.map((h, i) => (
+              <h1 key={i}
+                className="absolute inset-x-0 top-0 text-[30px] md:text-[40px] font-black text-black leading-[1.1] tracking-[-0.02em] transition-all duration-[650ms]"
+                style={{
+                  transitionTimingFunction: 'cubic-bezier(.22,1,.36,1)',
+                  opacity: heroIdx === i ? 1 : 0,
+                  transform: heroIdx === i ? 'translateX(0)' : (i < heroIdx ? 'translateX(-36px)' : 'translateX(36px)'),
+                }}>
+                {h.top}<br />
+                <span style={{ color: h.accent }}>{h.bottom}</span>
+              </h1>
+            ))}
+          </div>
+
+          <div className="relative h-[46px] sm:h-[26px] overflow-hidden mt-2.5">
+            {HERO.map((h, i) => (
+              <p key={i}
+                className="absolute inset-x-0 top-0 text-[14.5px] text-gray-500 max-w-[320px] mx-auto leading-relaxed transition-all duration-[650ms]"
+                style={{
+                  transitionTimingFunction: 'cubic-bezier(.22,1,.36,1)',
+                  opacity: heroIdx === i ? 1 : 0,
+                  transform: heroIdx === i ? 'translateX(0)' : 'translateX(24px)',
+                }}>
+                {h.sub}
+              </p>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 mt-4">
+            {HERO.map((_, i) => (
+              <button key={i} onClick={() => setHeroIdx(i)} aria-label={`View slide ${i + 1}`}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: heroIdx === i ? 18 : 6, height: 6,
+                  background: heroIdx === i ? HERO[i].accent : '#d4d4d8',
+                }} />
+            ))}
+          </div>
 
           {/* Trust row — people are about to pay, so say what reassures them */}
           <div className="flex items-center justify-center gap-4 mt-6 text-[11.5px] font-medium text-gray-400">

@@ -26,23 +26,33 @@ export default function CrescoSusuPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: '#07231a' }}>
+    <div className="min-h-[100dvh] flex flex-col" style={{ background: '#062018' }}>
 
-      {/* ── Ambient background ── growth rings spreading from the seed ── */}
+      {/* ── Background ── a flat, confident field with crisp geometry rather
+           than soft gradient glow: a fine grid, deliberate rings, and a horizon
+           curve suggesting ground the seed grows from. ── */}
       <div aria-hidden className="fixed inset-0 overflow-hidden pointer-events-none select-none">
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(120% 80% at 50% -10%, rgba(16,185,129,.20), transparent 60%)',
+
+        {/* fine grid — structure, like a ledger */}
+        <div className="absolute inset-0 opacity-[0.055]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.9) 1px, transparent 1px)',
+          backgroundSize: '46px 46px',
+          maskImage: 'radial-gradient(70% 55% at 50% 32%, #000 30%, transparent 78%)',
+          WebkitMaskImage: 'radial-gradient(70% 55% at 50% 32%, #000 30%, transparent 78%)',
         }} />
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(90% 60% at 85% 110%, rgba(212,175,55,.10), transparent 60%)',
-        }} />
-        {[300, 460, 640, 860].map((d, i) => (
+
+        {/* deliberate rings, evenly stepped */}
+        {[220, 360, 500, 640, 780].map((d, i) => (
           <div key={d} className="absolute rounded-full" style={{
-            width: d, height: d, left: '50%', top: '38%',
+            width: d, height: d, left: '50%', top: '34%',
             transform: 'translate(-50%,-50%)',
-            border: `1px solid rgba(255,255,255,${0.055 - i * 0.011})`,
+            border: `1px solid rgba(52,211,153,${0.16 - i * 0.026})`,
           }} />
         ))}
+
+        {/* horizon — the ground it grows from */}
+        <div className="absolute inset-x-[-20%] bottom-[-38%] h-[62%] rounded-[50%]"
+          style={{ background: '#04170f', boxShadow: '0 -1px 0 rgba(52,211,153,.22)' }} />
       </div>
 
       {/* ── Content ── */}
