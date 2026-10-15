@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const NAV = [
   { label: 'Dashboard', href: '/admin' },
@@ -14,35 +13,18 @@ const NAV = [
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [authed, setAuthed] = useState(false)
-  const [pass, setPass] = useState('')
   const pathname = usePathname()
+  const router = useRouter()
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_auth') === 'true') setAuthed(true)
-  }, [])
+  // Access is decided on the server (see src/proxy.ts). Anyone rendering this
+  // layout has already been let through, so there is no password check here.
+  if (pathname === '/admin/login') return <>{children}</>
 
-  function login() {
-    if (pass === 'chaledata2026') {
-      setAuthed(true)
-      sessionStorage.setItem('admin_auth', 'true')
-    }
+  async function signOut() {
+    await fetch('/api/admin/login', { method: 'DELETE' })
+    router.replace('/admin/login')
+    router.refresh()
   }
-
-  if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-xs">
-        <div className="text-center mb-6">
-          <span className="text-lg font-extrabold text-black">Chale</span>
-          <span className="text-lg font-extrabold text-blue-600">Data</span>
-          <p className="text-xs text-gray-400 mt-1">Admin</p>
-        </div>
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} placeholder="Password"
-          className="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm mb-3 focus:outline-none focus:border-black" />
-        <button onClick={login} className="w-full h-11 bg-black text-white rounded-lg text-sm font-semibold press">Login</button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,7 +35,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="font-extrabold text-blue-600 text-sm">Data</span>
             <span className="text-[10px] text-gray-400 font-medium">Admin</span>
           </div>
-          <a href="/" className="text-xs text-gray-400 hover:text-black transition">View Site →</a>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-xs text-gray-400 hover:text-black transition">View Site →</Link>
+            <button onClick={signOut} className="text-xs text-gray-400 hover:text-black transition">Sign out</button>
+          </div>
         </div>
       </div>
       {/* Tabs */}

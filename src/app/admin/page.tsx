@@ -1,33 +1,33 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminGet } from '@/lib/admin-api'
+
+type Stats = {
+  totalOrders: number
+  todayOrders: number
+  customers: number
+  revenue: number
+  profit: number
+  todayRevenue: number
+  fulfilled: number
+  failed: number
+  netMap: Record<string, number>
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
   const [balance, setBalance] = useState<{ loading: boolean; value: number | null; error?: string }>({ loading: false, value: null })
 
-  useEffect(() => { load() }, [])
-
-  async function load() {
-    const today = new Date().toISOString().slice(0, 10)
-    const [{ count: totalOrders }, { count: todayOrders }, { data: orders }, { count: customers }] = await Promise.all([
-      supabase.from('orders').select('*', { count: 'exact', head: true }),
-      supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
-      supabase.from('orders').select('amount,profit,payment_status,vendor_status,network,created_at').eq('payment_status', 'paid'),
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
-    ])
-
-    const revenue = (orders || []).reduce((a, o) => a + Number(o.amount), 0)
-    const profit = (orders || []).reduce((a, o) => a + Number(o.profit), 0)
-    const fulfilled = (orders || []).filter(o => o.vendor_status === 'success').length
-    const failed = (orders || []).filter(o => o.vendor_status === 'failed').length
-    const todayRevenue = (orders || []).filter(o => o.created_at?.startsWith(today)).reduce((a, o) => a + Number(o.amount), 0)
-    const netMap: Record<string, number> = {}
-    ;(orders || []).forEach(o => { netMap[o.network] = (netMap[o.network] || 0) + 1 })
-
-    setStats({ totalOrders, todayOrders, revenue, profit, todayRevenue, customers, fulfilled, failed, netMap })
-  }
+  // The totals are worked out on the server now, so the numbers behind them —
+  // every order row, with its cost and profit — never reach the browser.
+  useEffect(() => {
+    let cancelled = false
+    adminGet<Stats>('/api/admin/stats')
+      .then(s => { if (!cancelled) setStats(s) })
+      .catch(e => console.error('[admin] stats failed:', e))
+    return () => { cancelled = true }
+  }, [])
 
   async function checkBalance() {
     setBalance({ loading: true, value: null })
@@ -39,8 +39,8 @@ export default function AdminDashboard() {
       } else {
         setBalance({ loading: false, value: null, error: data.error || 'Failed to fetch balance' })
       }
-    } catch (e: any) {
-      setBalance({ loading: false, value: null, error: e.message })
+    } catch {
+      setBalance({ loading: false, value: null, error: 'Could not reach the vendor' })
     }
   }
 
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
       <h2 className="text-sm font-bold text-slate-700 mb-2">Orders by Network</h2>
       <div className="bg-white rounded-xl border border-slate-200 p-4">
-        {Object.entries(stats.netMap).sort((a: any, b: any) => b[1] - a[1]).map(([net, count]: any) => (
+        {Object.entries(stats.netMap).sort((a, b) => b[1] - a[1]).map(([net, count]) => (
           <div key={net} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
             <span className="text-sm font-medium uppercase text-slate-700">{net}</span>
             <span className="text-sm font-bold text-slate-900">{count} orders</span>

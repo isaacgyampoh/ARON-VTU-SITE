@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminList, adminPatch, adminPost, adminDelete } from '@/lib/admin-api'
 import type { Network, DataPlan } from '@/lib/types'
 
 const STREAM_CODES = ['netflix', 'applemusic', 'appletv', 'applegames', 'icloud', 'amazon']
@@ -32,22 +32,24 @@ export default function BundlesPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const [{ data: nets }, { data: pls }] = await Promise.all([
-      supabase.from('networks').select('*').order('type').order('name'),
-      supabase.from('data_plans').select('*, networks(name, code, type)').order('network_id').order('sort_order').order('selling_price'),
+    const [nets, pls] = await Promise.all([
+      adminList<Network>('/api/admin/networks'),
+      adminList<DataPlan>('/api/admin/plans'),
     ])
-    setNetworks(nets || [])
-    setPlans(pls || [])
+    setNetworks(nets)
+    setPlans(pls)
     setLoading(false)
   }
 
   async function save() {
     if (!editing) return
-    const { id, ...data } = editing as any
-    delete data.networks
+    const { id, networks: _joined, ...rest } = editing
+    void _joined
+    const data: Record<string, unknown> = { ...rest }
+
     // For streaming, set validity = data_amount (e.g. "1 Month")
-    const streaming = isStreaming(networks, data.network_id)
-    const afa = isAfa(networks, data.network_id)
+    const streaming = isStreaming(networks, editing.network_id || '')
+    const afa = isAfa(networks, editing.network_id || '')
     if (streaming && data.data_amount) {
       data.validity = data.data_amount
     }
@@ -55,23 +57,44 @@ export default function BundlesPage() {
       data.data_amount = 'AFA Registration'
       data.validity = 'One-time'
     }
-    if (id) {
-      await supabase.from('data_plans').update(data).eq('id', id)
-    } else {
-      await supabase.from('data_plans').insert(data)
+
+    // The vendor is asked for a whole number of GB. Catch a size it could never
+    // read here, at the point it is typed, rather than at the point a paying
+    // customer's order fails.
+    if (!streaming && !afa && !data.vendor_plan_id) {
+      const size = String(data.data_amount ?? '')
+      if (!/^\d+\s*GB$/i.test(size)) {
+        alert(`"${size}" is not a whole number of GB. Set a Vendor Plan ID, or these orders will wait for manual fulfilment.`)
+      }
     }
-    setEditing(null)
+
+    try {
+      if (id) await adminPatch('/api/admin/plans', { id, ...data })
+      else await adminPost('/api/admin/plans', data)
+      setEditing(null)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not save that plan')
+      return
+    }
     load()
   }
 
   async function del(id: string) {
     if (!confirm('Delete this plan?')) return
-    await supabase.from('data_plans').delete().eq('id', id)
+    try {
+      await adminDelete('/api/admin/plans', id)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not delete that plan')
+    }
     load()
   }
 
   async function toggle(id: string, active: boolean) {
-    await supabase.from('data_plans').update({ is_active: !active }).eq('id', id)
+    try {
+      await adminPatch('/api/admin/plans', { id, is_active: !active })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not update that plan')
+    }
     load()
   }
 
@@ -100,10 +123,10 @@ export default function BundlesPage() {
   const filtered = filterNet === 'all' ? plans : plans.filter(p => p.network_id === filterNet)
 
   // Group by network
-  const grouped: Record<string, { net: any; plans: DataPlan[] }> = {}
+  const grouped: Record<string, { net: DataPlan['networks']; plans: DataPlan[] }> = {}
   filtered.forEach(p => {
     const key = p.network_id
-    if (!grouped[key]) grouped[key] = { net: (p as any).networks, plans: [] }
+    if (!grouped[key]) grouped[key] = { net: p.networks, plans: [] }
     grouped[key].plans.push(p)
   })
 
@@ -135,7 +158,7 @@ export default function BundlesPage() {
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="font-bold text-slate-900 mb-1">{(editing as any).id ? 'Edit' : 'New'} Plan</h2>
+            <h2 className="font-bold text-slate-900 mb-1">{editing.id ? 'Edit' : 'New'} Plan</h2>
             <p className="text-xs text-slate-400 mb-4">
               {streaming ? 'Streaming subscription — set duration and price.' : isAfa(networks, editing?.network_id || '') ? 'AFA Registration — set registration fee.' : 'Data bundle — set size and price.'}
             </p>
@@ -270,7 +293,7 @@ export default function BundlesPage() {
 
       <div className="space-y-4">
         {Object.values(grouped).map(({ net, plans: netPlans }) => {
-          const isStream = STREAM_CODES.includes(net?.code) || net?.type === 'streaming'
+          const isStream = STREAM_CODES.includes(net?.code ?? '') || net?.type === 'streaming'
           return (
             <div key={netPlans[0].network_id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className={`px-4 py-2.5 flex items-center justify-between border-b border-slate-100 ${isStream ? 'bg-purple-50' : 'bg-blue-50'}`}>

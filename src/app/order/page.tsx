@@ -1,8 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { Order } from '@/lib/types'
+import type { TrackedOrder } from '@/lib/types'
 
 const GHS = (n: number) => `GH₵${Number(n).toFixed(2)}`
 
@@ -24,18 +24,35 @@ function StatusPill({ label, status }: { label: string; status: string }) {
 
 export default function OrderPage() {
   const [phone, setPhone] = useState('')
-  const [orders, setOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<TrackedOrder[]>([])
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
+  // Goes through the server: the orders table is no longer readable from the
+  // browser, and the number is normalised the same way checkout normalises it,
+  // so "+233 24..." and "024..." now find the same orders.
   async function search() {
-    if (!phone.trim()) return
+    if (!phone.trim() || loading) return
     setLoading(true)
-    const clean = phone.trim().replace(/\s+/g, '').replace(/^0/, '233')
-    const { data } = await supabase
-      .from('orders').select('*').eq('phone', clean)
-      .order('created_at', { ascending: false }).limit(10)
-    setOrders(data || [])
+    setError('')
+    try {
+      const res = await fetch('/api/orders/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Could not look that up right now.')
+        setOrders([])
+      } else {
+        setOrders(data.orders || [])
+      }
+    } catch {
+      setError('Network error. Please try again.')
+      setOrders([])
+    }
     setSearched(true)
     setLoading(false)
   }
@@ -46,12 +63,12 @@ export default function OrderPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-40 bg-white border-b border-gray-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-black transition-colors">
+          <Link href="/" className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-black transition-colors">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Home
-          </a>
+          </Link>
           <div className="flex items-center">
             <span className="text-[15px] font-black text-black">Chale</span>
             <span className="text-[15px] font-black text-blue-600">Data</span>
@@ -87,13 +104,17 @@ export default function OrderPage() {
           </button>
         </div>
 
+        {error && (
+          <p className="text-[13px] text-red-600 text-center mb-6">{error}</p>
+        )}
+
         {/* Empty */}
-        {searched && orders.length === 0 && (
+        {searched && !error && orders.length === 0 && (
           <div className="text-center py-16">
             <p className="text-[13px] text-gray-300">No orders found for this number.</p>
             <p className="text-[12px] text-gray-300 mt-1">
               Need help?{' '}
-              <a href="https://wa.me/233558659948" target="_blank" className="text-black underline underline-offset-2 font-medium">
+              <a href="https://wa.me/233558659948" target="_blank" rel="noopener noreferrer" className="text-black underline underline-offset-2 font-medium">
                 WhatsApp us
               </a>
             </p>

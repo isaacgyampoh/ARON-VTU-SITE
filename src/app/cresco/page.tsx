@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 /**
@@ -99,8 +100,8 @@ export default function CrescoSusuPage() {
           {done ? (
             <div className="rounded-2xl px-5 py-4 text-center"
               style={{ background: 'rgba(16,185,129,.12)', border: '1px solid rgba(16,185,129,.28)' }}>
-              <p className="text-[14px] font-semibold text-white">You're on the list</p>
-              <p className="text-[13px] text-white/60 mt-1">We'll message you the day we open.</p>
+              <p className="text-[14px] font-semibold text-white">You&apos;re on the list</p>
+              <p className="text-[13px] text-white/60 mt-1">We&apos;ll message you the day we open.</p>
             </div>
           ) : (
             <>
@@ -124,7 +125,7 @@ export default function CrescoSusuPage() {
                 </button>
               </div>
               <p className="mt-3 text-[12px] text-white/35">
-                We'll only message you about the launch.
+                We&apos;ll only message you about the launch.
               </p>
             </>
           )}
@@ -158,9 +159,9 @@ export default function CrescoSusuPage() {
         <p className="mt-5 text-[11.5px] text-white/25">
           Cresco Susu &middot; a ChaleData company
         </p>
-        <a href="/" className="inline-block mt-3 text-[11.5px] text-white/35 hover:text-white/70 transition-colors">
+        <Link href="/" className="inline-block mt-3 text-[11.5px] text-white/35 hover:text-white/70 transition-colors">
           &larr; Back to ChaleData
-        </a>
+        </Link>
       </footer>
     </div>
   )

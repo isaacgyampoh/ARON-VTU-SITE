@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminList, adminPatch, adminPost } from '@/lib/admin-api'
 import type { Order } from '@/lib/types'
 
 export default function OrdersPage() {
@@ -15,34 +15,37 @@ export default function OrdersPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(200)
-    setOrders(data || [])
+    setOrders(await adminList<Order>('/api/admin/orders?limit=200'))
     setLoading(false)
   }
 
+  // The password that used to be sent from here is gone — the admin session
+  // cookie authorises these calls.
   async function fixAllStuck() {
     if (!confirm('Fix all stuck paid orders and missing customers?')) return
     setActing('all')
-    const res = await fetch('/api/admin/fix-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: 'all', adminPassword: 'chaledata2026' }),
-    })
-    const data = await res.json()
-    alert(data.message || `Fixed ${data.fixed} of ${data.total} stuck orders`)
+    try {
+      const data = await adminPost<{ fixed: number; total: number; message?: string }>(
+        '/api/admin/fix-order', { orderId: 'all' },
+      )
+      alert(data.message || `Fixed ${data.fixed} of ${data.total} stuck orders`)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not fix those orders')
+    }
     setActing(null)
     load()
   }
 
   async function retry(id: string) {
     setActing(id)
-    const res = await fetch('/api/vendor?action=retry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: id }),
-    })
-    const data = await res.json()
-    alert(data.success ? '✅ Fulfilled via vendor!' : `❌ Failed: ${data.error}`)
+    try {
+      const data = await adminPost<{ success: boolean; error?: string; note?: string }>(
+        '/api/vendor?action=retry', { orderId: id },
+      )
+      alert(data.success ? (data.note ? `⚠ ${data.note}` : '✅ Fulfilled via vendor!') : `❌ Failed: ${data.error}`)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Retry failed')
+    }
     setActing(null)
     load()
   }
@@ -50,11 +53,11 @@ export default function OrdersPage() {
   async function markFulfilled(id: string) {
     if (!confirm('Mark this order as manually fulfilled?')) return
     setActing(id)
-    await supabase.from('orders').update({
-      vendor_status: 'success',
-      fulfilled_at: new Date().toISOString(),
-      vendor_api_used: 'manual',
-    }).eq('id', id)
+    try {
+      await adminPatch('/api/admin/orders', { id, action: 'mark_fulfilled' })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not update that order')
+    }
     setActing(null)
     load()
   }
@@ -62,23 +65,30 @@ export default function OrdersPage() {
   async function markPaid(id: string) {
     if (!confirm('Mark this order as paid? Only do this if you confirmed payment manually.')) return
     setActing(id)
-    await supabase.from('orders').update({
-      payment_status: 'paid',
-      paid_at: new Date().toISOString(),
-    }).eq('id', id)
+    try {
+      await adminPatch('/api/admin/orders', { id, action: 'mark_paid' })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not update that order')
+    }
     setActing(null)
     load()
   }
 
   function exportCSV() {
+    // Quoted, because plan names contain commas and unquoted values silently
+    // shifted every later column in the exported file.
+    const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const rows = filtered.map(o =>
-      [o.order_no, o.phone, o.network, o.data_amount, o.plan_name, o.amount, o.payment_status, o.vendor_status, o.created_at].join(',')
+      [o.order_no, o.phone, o.network, o.data_amount, o.plan_name, o.amount, o.payment_status, o.vendor_status, o.created_at]
+        .map(cell).join(',')
     )
     const csv = 'Order,Phone,Network,Data,Plan,Amount,Payment,Vendor,Date\n' + rows.join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    a.href = url
     a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
+    URL.revokeObjectURL(url)
   }
 
   const badge = (status: string) => {
@@ -163,7 +173,7 @@ export default function OrdersPage() {
                     ⚠ Needs Ghana Card — register via xpresportal
                   </div>
                 )}
-                {o.vendor_status === 'failed' && o.payment_status === 'paid' && o.network !== 'mtnafa' && (
+                {(o.vendor_status === 'failed' || o.vendor_status === 'pending') && o.payment_status === 'paid' && o.network !== 'mtnafa' && (
                   <button disabled={acting === o.id} onClick={() => retry(o.id)}
                     className="h-8 px-3 bg-blue-600 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
                     {acting === o.id ? 'Retrying...' : 'Retry Vendor'}
@@ -181,12 +191,12 @@ export default function OrdersPage() {
                     Mark Paid
                   </button>
                 )}
-                <a href={`https://wa.me/${o.phone.replace(/^0/, '233')}?text=Hi! Your ChaleData order ${o.order_no} for ${o.data_amount} (${o.network.toUpperCase()}) has been processed. Thank you!`}
-                  target="_blank"
+                <a href={`https://wa.me/${o.phone.replace(/^0/, '233')}?text=${encodeURIComponent(`Hi! Your ChaleData order ${o.order_no} for ${o.data_amount} (${o.network.toUpperCase()}) has been processed. Thank you!`)}`}
+                  target="_blank" rel="noopener noreferrer"
                   className="h-8 px-3 bg-[#25D366] text-white rounded-lg text-xs font-semibold flex items-center">
                   WhatsApp
                 </a>
-                {o.vendor_response && (
+                {Boolean(o.vendor_response) && (
                   <details className="w-full">
                     <summary className="text-[10px] text-slate-400 cursor-pointer mt-1">Vendor response</summary>
                     <pre className="text-[9px] text-slate-500 mt-1 overflow-x-auto">{JSON.stringify(o.vendor_response, null, 2)}</pre>

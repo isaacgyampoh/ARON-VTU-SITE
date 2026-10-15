@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminList } from '@/lib/admin-api'
 import type { Customer } from '@/lib/types'
 
 export default function CustomersPage() {
@@ -9,27 +9,31 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  useEffect(() => { load() }, [])
-
-  async function load() {
-    const { data } = await supabase.from('customers').select('*').order('total_spent', { ascending: false }).limit(500)
-    setCustomers(data || [])
-    setLoading(false)
-  }
+  useEffect(() => {
+    let cancelled = false
+    adminList<Customer>('/api/admin/customers').then(rows => {
+      if (cancelled) return
+      setCustomers(rows)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const filtered = search
     ? customers.filter(c => c.phone.includes(search.replace(/\s/g, '')) || c.network?.toLowerCase().includes(search.toLowerCase()))
     : customers
 
   function exportCSV() {
+    const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const csv = 'Phone,Network,Total Purchases,Total Spent,Last Purchase\n' +
-      filtered.map(c => `${c.phone},${c.network || ''},${c.total_purchases},${Number(c.total_spent).toFixed(2)},${c.last_purchase_at || ''}`).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
+      filtered.map(c => [c.phone, c.network || '', c.total_purchases, Number(c.total_spent).toFixed(2), c.last_purchase_at || '']
+        .map(cell).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
     a.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
+    URL.revokeObjectURL(url)
   }
 
   function exportPhones() {

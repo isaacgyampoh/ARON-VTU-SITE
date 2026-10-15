@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminList, adminPatch, adminPost, adminDelete } from '@/lib/admin-api'
 import type { Network } from '@/lib/types'
 
 const PRESET_CODES = [
@@ -27,31 +27,40 @@ export default function NetworksPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase.from('networks').select('*').order('type').order('name')
-    setNetworks(data || [])
+    setNetworks(await adminList<Network>('/api/admin/networks'))
     setLoading(false)
   }
 
   async function save() {
     if (!editing) return
-    const { id, ...data } = editing as any
-    if (id) {
-      await supabase.from('networks').update(data).eq('id', id)
-    } else {
-      await supabase.from('networks').insert(data)
+    const { id, ...data } = editing
+    try {
+      if (id) await adminPatch('/api/admin/networks', { id, ...data })
+      else await adminPost('/api/admin/networks', data)
+      setEditing(null)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not save that network')
+      return
     }
-    setEditing(null)
     load()
   }
 
   async function toggle(id: string, active: boolean) {
-    await supabase.from('networks').update({ is_active: !active }).eq('id', id)
+    try {
+      await adminPatch('/api/admin/networks', { id, is_active: !active })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not update that network')
+    }
     load()
   }
 
   async function del(id: string) {
     if (!confirm('Delete this network? This will also hide all its bundles.')) return
-    await supabase.from('networks').delete().eq('id', id)
+    try {
+      await adminDelete('/api/admin/networks', id)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not delete that network')
+    }
     load()
   }
 
@@ -95,7 +104,7 @@ export default function NetworksPage() {
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-5 w-full max-w-md">
-            <h2 className="font-bold text-slate-900 mb-4">{(editing as any).id ? 'Edit' : 'New'} Network</h2>
+            <h2 className="font-bold text-slate-900 mb-4">{editing.id ? 'Edit' : 'New'} Network</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })}

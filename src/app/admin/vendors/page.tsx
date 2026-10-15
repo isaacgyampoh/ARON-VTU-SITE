@@ -1,8 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminList, adminGet, adminPut, adminPatch, adminPost, adminDelete } from '@/lib/admin-api'
 import type { VendorApi } from '@/lib/types'
+
+type VendorConfig = {
+  autoFulfil: boolean
+  vendorName: string
+  baseUrl: string
+  hasKey: boolean
+  keyPreview: string | null
+}
 
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<VendorApi[]>([])
@@ -12,56 +20,76 @@ export default function VendorsPage() {
 
   // Live vendor settings — which supplier is used, and whether buying is
   // automatic at all.
-  const [cfg, setCfg] = useState<any>(null)
+  const [cfg, setCfg] = useState<VendorConfig | null>(null)
   const [form, setForm] = useState({ vendorName: '', baseUrl: '', apiKey: '' })
   const [savingCfg, setSavingCfg] = useState(false)
   const [cfgMsg, setCfgMsg] = useState('')
 
   async function loadCfg() {
-    const d = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null)
-    if (d) { setCfg(d); setForm({ vendorName: d.vendorName || '', baseUrl: d.baseUrl || '', apiKey: '' }) }
+    try {
+      const d = await adminGet<VendorConfig>('/api/admin/settings')
+      setCfg(d)
+      setForm({ vendorName: d.vendorName || '', baseUrl: d.baseUrl || '', apiKey: '' })
+    } catch (e) {
+      console.error('[admin] vendor settings failed:', e)
+    }
   }
 
-  async function saveCfg(patch: any) {
+  async function saveCfg(patch: Partial<{ autoFulfil: boolean; vendorName: string; baseUrl: string; apiKey: string }>) {
     setSavingCfg(true); setCfgMsg('')
-    const d = await fetch('/api/admin/settings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    }).then(r => r.json()).catch(() => ({ error: 'failed' }))
+    try {
+      await adminPost('/api/admin/settings', patch)
+      setCfgMsg('Saved')
+    } catch (e) {
+      // The server rejects an address that is not a public https endpoint —
+      // show why, rather than a bare "could not save".
+      setCfgMsg(e instanceof Error ? e.message : 'Could not save')
+    }
     setSavingCfg(false)
-    setCfgMsg(d.error ? 'Could not save' : 'Saved')
     setForm(f => ({ ...f, apiKey: '' }))
     loadCfg()
   }
 
   async function testCfg() {
     setSavingCfg(true); setCfgMsg('Checking…')
-    const d = await fetch('/api/admin/settings', { method: 'PUT' }).then(r => r.json()).catch(() => ({ detail: 'Could not reach the vendor' }))
-    setSavingCfg(false); setCfgMsg(d.detail || '')
+    try {
+      const d = await adminPut<{ detail: string }>('/api/admin/settings')
+      setCfgMsg(d.detail || '')
+    } catch {
+      setCfgMsg('Could not reach the vendor')
+    }
+    setSavingCfg(false)
   }
 
-  useEffect(() => { load(); loadCfg() }, [])
-
   async function load() {
-    const { data } = await supabase.from('vendor_apis').select('*').order('created_at')
-    setVendors(data || [])
+    setVendors(await adminList<VendorApi>('/api/admin/vendors'))
   }
 
   async function save() {
     if (!editing) return
-    const { id, ...data } = editing as any
+    const { id, ...rest } = editing
+    const data: Record<string, unknown> = { ...rest }
     if (typeof data.headers === 'string') try { data.headers = JSON.parse(data.headers) } catch { data.headers = {} }
     if (typeof data.request_format === 'string') try { data.request_format = JSON.parse(data.request_format) } catch { data.request_format = {} }
-    if (id) await supabase.from('vendor_apis').update(data).eq('id', id)
-    else await supabase.from('vendor_apis').insert(data)
-    setEditing(null)
+    try {
+      if (id) await adminPatch('/api/admin/vendors', { id, ...data })
+      else await adminPost('/api/admin/vendors', data)
+      setEditing(null)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not save that vendor')
+      return
+    }
     load()
   }
 
   async function setActive(id: string) {
-    // Deactivate all, then activate selected
-    await supabase.from('vendor_apis').update({ is_active: false }).neq('id', 'none')
-    await supabase.from('vendor_apis').update({ is_active: true }).eq('id', id)
+    // One call, so there is never a moment with no active vendor if the second
+    // write fails.
+    try {
+      await adminPost('/api/admin/vendors/activate', { id })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not change the active vendor')
+    }
     load()
   }
 
@@ -69,23 +97,40 @@ export default function VendorsPage() {
     setTesting(id)
     setTestResult('')
     try {
-      const res = await fetch('/api/vendor?action=test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendorId: id }),
-      })
-      const data = await res.json()
+      const data = await adminPost<{ success: boolean; status?: number; error?: string; response?: string }>(
+        '/api/vendor?action=test', { vendorId: id },
+      )
       setTestResult(data.success ? `✅ Connected (${data.status})` : `❌ Failed: ${data.error || data.response}`)
-    } catch (e: any) {
-      setTestResult(`❌ Error: ${e.message}`)
+    } catch (e) {
+      setTestResult(`❌ Error: ${e instanceof Error ? e.message : 'Request failed'}`)
     }
     setTesting(null)
     load()
   }
 
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      adminList<VendorApi>('/api/admin/vendors'),
+      adminGet<VendorConfig>('/api/admin/settings').catch(() => null),
+    ]).then(([rows, config]) => {
+      if (cancelled) return
+      setVendors(rows)
+      if (config) {
+        setCfg(config)
+        setForm({ vendorName: config.vendorName || '', baseUrl: config.baseUrl || '', apiKey: '' })
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
+
   async function del(id: string) {
     if (!confirm('Delete this vendor?')) return
-    await supabase.from('vendor_apis').delete().eq('id', id)
+    try {
+      await adminDelete('/api/admin/vendors', id)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not delete that vendor')
+    }
     load()
   }
 
@@ -169,8 +214,8 @@ export default function VendorsPage() {
               <input value={editing.base_url || ''} onChange={e => setEditing({ ...editing, base_url: e.target.value })} placeholder="Base URL (https://api.vendor.com)" className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
               <input value={editing.api_key || ''} onChange={e => setEditing({ ...editing, api_key: e.target.value })} placeholder="API Key" className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
               <input value={editing.purchase_endpoint || ''} onChange={e => setEditing({ ...editing, purchase_endpoint: e.target.value })} placeholder="Purchase endpoint (e.g. /purchase)" className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
-              <textarea value={typeof editing.headers === 'object' ? JSON.stringify(editing.headers, null, 2) : editing.headers || ''} onChange={e => setEditing({ ...editing, headers: e.target.value as any })} placeholder='Headers JSON (e.g. {"X-Api-Key": "xxx"})' className="w-full h-20 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono" />
-              <textarea value={typeof editing.request_format === 'object' ? JSON.stringify(editing.request_format, null, 2) : editing.request_format || ''} onChange={e => setEditing({ ...editing, request_format: e.target.value as any })} placeholder='Request format JSON. Use {phone}, {network}, {plan}, {amount}, {data}' className="w-full h-20 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono" />
+              <textarea value={typeof editing.headers === 'object' ? JSON.stringify(editing.headers, null, 2) : editing.headers || ''} onChange={e => setEditing({ ...editing, headers: e.target.value as unknown as VendorApi['headers'] })} placeholder='Headers JSON (e.g. {"X-Api-Key": "xxx"})' className="w-full h-20 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono" />
+              <textarea value={typeof editing.request_format === 'object' ? JSON.stringify(editing.request_format, null, 2) : editing.request_format || ''} onChange={e => setEditing({ ...editing, request_format: e.target.value as unknown as VendorApi['request_format'] })} placeholder='Request format JSON. Use {phone}, {network}, {plan}, {amount}, {data}' className="w-full h-20 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono" />
               <input value={editing.notes || ''} onChange={e => setEditing({ ...editing, notes: e.target.value })} placeholder="Notes" className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
             </div>
             <div className="flex gap-2 mt-5">

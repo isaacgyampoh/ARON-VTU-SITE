@@ -1,15 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { fulfillOrder } from '@/lib/vendor'
+import { requireAdmin } from '@/lib/require-admin'
+import type { Order } from '@/lib/types'
 
-export async function POST(req: NextRequest) {
-  const { orderId, adminPassword } = await req.json()
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-  if (adminPassword !== 'chaledata2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+/**
+ * Retries paid orders that never reached the vendor, and backfills the customer
+ * record if the webhook died before writing it.
+ *
+ * The password that used to guard this was hardcoded here and in the browser
+ * bundle; the admin session cookie guards it now.
+ */
+export async function POST(req: Request) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
+  const body = await req.json().catch(() => ({}))
+  const orderId = body?.orderId
+  if (typeof orderId !== 'string') {
+    return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
   }
 
   const sb = createServiceClient()
+
+  async function ensureCustomer(o: Pick<Order, 'phone' | 'network' | 'amount' | 'paid_at' | 'created_at'>) {
+    const { data: existing } = await sb.from('customers').select('id').eq('phone', o.phone).maybeSingle()
+    if (existing) return
+    await sb.from('customers').insert({
+      phone: o.phone,
+      network: o.network,
+      total_purchases: 1,
+      total_spent: Number(o.amount),
+      last_purchase_at: o.paid_at || new Date().toISOString(),
+      first_seen_at: o.created_at,
+    })
+  }
 
   // Fix ALL stuck paid+pending orders at once
   if (orderId === 'all') {
@@ -20,44 +48,21 @@ export async function POST(req: NextRequest) {
       .in('vendor_status', ['pending', 'failed'])
       .limit(20)
 
-    if (!stuck?.length) return NextResponse.json({ fixed: 0, message: 'No stuck orders found' })
+    if (!stuck?.length) return NextResponse.json({ fixed: 0, total: 0, message: 'No stuck orders found' })
 
-    // Also fix missing customers
-    for (const o of stuck) {
-      const { data: existing } = await sb.from('customers').select('id').eq('phone', o.phone).maybeSingle()
-      if (!existing) {
-        await sb.from('customers').insert({
-          phone: o.phone,
-          network: o.network,
-          total_purchases: 1,
-          total_spent: Number(o.amount),
-          last_purchase_at: o.paid_at || new Date().toISOString(),
-          first_seen_at: o.created_at,
-        })
-      }
-    }
+    for (const o of stuck) await ensureCustomer(o)
 
+    // Count orders actually delivered, not merely calls that did not throw.
     const results = await Promise.allSettled(stuck.map(o => fulfillOrder(o.id)))
-    const fixed = results.filter(r => r.status === 'fulfilled').length
+    const fixed = results.filter(r => r.status === 'fulfilled' && r.value.success).length
     return NextResponse.json({ fixed, total: stuck.length })
   }
 
   // Fix single order
-  const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single()
+  const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single<Order>()
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
 
-  // Fix missing customer record
-  const { data: existing } = await sb.from('customers').select('id').eq('phone', order.phone).maybeSingle()
-  if (!existing && order.payment_status === 'paid') {
-    await sb.from('customers').insert({
-      phone: order.phone,
-      network: order.network,
-      total_purchases: 1,
-      total_spent: Number(order.amount),
-      last_purchase_at: order.paid_at || new Date().toISOString(),
-      first_seen_at: order.created_at,
-    })
-  }
+  if (order.payment_status === 'paid') await ensureCustomer(order)
 
   const result = await fulfillOrder(orderId)
   return NextResponse.json({ success: result.success, result })
