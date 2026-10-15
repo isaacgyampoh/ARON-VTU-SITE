@@ -1,0 +1,32 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "aron-vtu",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-10-12",
+	"compatibility_flags": [
+		// Required by the adapter: the app uses node:crypto for the admin
+		// session HMAC and the Paystack webhook signature.
+		"nodejs_compat",
+		// Lets the app fetch Paystack and the vendor API over the public
+		// internet rather than looping back into this worker.
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "aron-vtu"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+	// No "images" binding: the app ships its network logos as static files in
+	// public/networks and does not use next/image, so there is nothing to
+	// optimise and no Cloudflare Images usage to pay for.
+}

@@ -1,0 +1,9 @@
+# Local Workers-runtime values for `npm run preview` / `wrangler dev`.
+# Copy to .dev.vars (gitignored) and fill in. Never commit real values.
+NEXTJS_ENV=development
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+PAYSTACK_SECRET_KEY=
+ADMIN_PASSWORD=
+ADMIN_SESSION_SECRET=
+NEXT_PUBLIC_SITE_URL=https://chaledata.com

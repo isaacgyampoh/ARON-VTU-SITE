@@ -19,3 +19,8 @@ const nextConfig: NextConfig = {
 }
 
 export default nextConfig
+
+// Gives `next dev` the same Cloudflare bindings the deployed worker gets, so
+// local development and production read their configuration the same way.
+// No-op outside of `next dev`.
+void import('@opennextjs/cloudflare').then((m) => m.initOpenNextCloudflareForDev())
