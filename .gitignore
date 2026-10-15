@@ -50,3 +50,6 @@ next-env.d.ts
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# recovery credential hand-off (never commit)
+.secrets-to-fill.env
