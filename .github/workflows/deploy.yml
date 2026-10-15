@@ -1,0 +1,45 @@
+name: Deploy to Cloudflare Workers
+
+# Production deploys happen on push to main. The Vercel project this app used
+# to live on is disabled, so main is now deployed by this workflow only.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
+      # and the home page, /detail/[code] and the sitemap are prerendered from
+      # Supabase, so the build needs read access to the database. The runtime
+      # secrets (PAYSTACK_SECRET_KEY, ADMIN_PASSWORD, ADMIN_SESSION_SECRET)
+      # are held as Worker secrets and are deliberately not needed here.
+      - name: Build and deploy
+        run: npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://chaledata.com
