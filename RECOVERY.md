@@ -1,12 +1,14 @@
 # Production recovery: Vercel → Cloudflare Workers
 
-**Status: `chaledata.com` and `www.chaledata.com` are live on Cloudflare
-Workers over HTTPS, serving the real storefront from the production database.**
-The home page, `/detail/[code]` and the sitemap all render real plans and
-prices. Supabase is connected; its 812 orders and 104 customers are untouched.
+**Status: recovered. `chaledata.com` and `www.chaledata.com` are live on
+Cloudflare Workers over HTTPS**, serving the real storefront, taking payment
+and gated behind a working admin. Supabase and Paystack are both connected and
+were verified against their live APIs. No customer data was modified.
 
-**One gap remains: the two Paystack keys are not set, so checkout cannot take
-payment.** Everything else — browsing, order tracking, the admin — works. See
+**One manual step remains, and it matters: the Paystack webhook URL must be
+repointed to `https://chaledata.com/api/webhook`.** Paystack exposes no API for
+this — it is dashboard-only. Until it is changed, payments will succeed but
+bundles will not deliver automatically. See
 [What is still needed](#what-is-still-needed).
 
 ## Why production went down
@@ -114,12 +116,36 @@ dashboards:
 | `SUPABASE_SERVICE_ROLE_KEY` | **Done.** Same route; set as a Worker secret. |
 | `ADMIN_PASSWORD` | **Done.** Generated fresh — see `.admin-credentials.txt`. |
 | `ADMIN_SESSION_SECRET` | **Done.** Generated fresh. |
-| `PAYSTACK_SECRET_KEY` | **Still needed.** Paystack → Settings → API Keys & Webhooks (`sk_live_…`). |
-| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | **Still needed.** Same screen (`pk_live_…`). Inlined at build time, so it needs a rebuild, not just a secret. |
+| `PAYSTACK_SECRET_KEY` | **Done.** Verified against the live Paystack API before use. |
+| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | **Done.** Inlined into the client bundle at build time. |
 
-Also check that the Paystack webhook URL points at
-`https://chaledata.com/api/webhook` — it will still be aimed at the old Vercel
-deployment, and paid orders are only fulfilled when that webhook arrives.
+### The one thing left: the Paystack webhook URL
+
+In the Paystack dashboard, set the live webhook to:
+
+```
+https://chaledata.com/api/webhook
+```
+
+It still points at the dead Vercel deployment. The webhook is what marks an
+order paid, records the customer and calls the vendor API to deliver the
+bundle — so until it is changed, a customer can pay and receive nothing.
+There is no Paystack API for this; it has to be done in the dashboard.
+
+Anything paid in that window is recoverable: the order will sit `pending` in
+the admin with the payment visible in Paystack, and
+`/api/admin/fix-order` exists to fulfil it by hand.
+
+### Rotate the credentials that were pasted into chat
+
+The Supabase personal access token and the live Paystack keys were pasted into
+a chat transcript during the recovery. The Supabase token is account-wide, not
+project-scoped, and the Paystack secret key can move money. Rotate both:
+
+- Supabase → Account → Access Tokens → revoke, reissue.
+- Paystack → Settings → API Keys & Webhooks → roll the secret key, then
+  `npx wrangler secret put PAYSTACK_SECRET_KEY --name aron-vtu`. Rolling the
+  public key additionally needs a rebuild and redeploy.
 
 **To finish:** fill in `.secrets-to-fill.env` (gitignored) and run
 
