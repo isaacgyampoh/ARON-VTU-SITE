@@ -1,8 +1,10 @@
 # Production recovery: Vercel → Cloudflare Workers
 
-**Status: the application is built, deployed and verified on Cloudflare. It is
-not yet serving `chaledata.com`, because four credentials cannot be recovered
-from Vercel and have to be supplied once.** See [What is still needed](#what-is-still-needed).
+**Status: `chaledata.com` and `www.chaledata.com` are live on Cloudflare
+Workers over HTTPS.** Every route works except the home page, `/detail/[code]`
+and the sitemap, which read Supabase and return 500 until the four credentials
+Vercel will not give back are supplied once. See
+[What is still needed](#what-is-still-needed).
 
 ## Why production went down
 
@@ -135,9 +137,18 @@ untouched.
 - **Vercel:** the project, its domains and its deployment history were left
   exactly as they were. Nothing there was deleted, renamed or unpaused. If the
   bill is settled it can be switched back on, and DNS pointed back, at any time.
-- **DNS:** the zone had no records to overwrite, so the cutover adds records
+- **DNS:** the zone had no records to overwrite, so the cutover added records
   rather than replacing any. No email, verification or business-service record
-  exists in this zone to disturb.
+  existed in this zone to disturb. The two records now present are the proxied
+  `AAAA 100::` placeholders Cloudflare creates for a Worker custom domain:
+
+  | Record | Name | Target |
+  | --- | --- | --- |
+  | AAAA (proxied) | `chaledata.com` | Worker `aron-vtu` |
+  | AAAA (proxied) | `www.chaledata.com` | Worker `aron-vtu` |
+
+  To hand the domain back to Vercel, detach both custom domains from the
+  Worker and recreate the Vercel A records.
 
 ## Remaining limitations
 

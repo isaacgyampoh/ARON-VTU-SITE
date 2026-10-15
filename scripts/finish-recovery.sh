@@ -2,13 +2,16 @@
 #
 # Finishes the Vercel -> Cloudflare Workers recovery.
 #
-# Everything else is already done: the Worker exists, it is deployed, and the
-# admin secrets are set. The only thing missing is the four credentials that
-# Vercel would not give back. Fill in .secrets-to-fill.env, run this, and it
-# will upload them, rebuild, redeploy, verify the result and only then point
-# chaledata.com at the Worker.
+# Everything else is already done: the Worker exists, it is deployed, the admin
+# secrets are set, and chaledata.com + www already point at it. The only thing
+# missing is the four credentials that Vercel would not give back, without
+# which the home page, /detail/[code] and the sitemap return 500.
 #
-# It refuses to touch DNS unless the new deployment actually serves the shop.
+# Fill in .secrets-to-fill.env, run this, and it will check the credentials
+# read-only against Supabase, upload them, rebuild, redeploy and verify.
+#
+# The domain is already live, so a bad deploy would be visible. If anything
+# looks wrong afterwards:  npx wrangler rollback --name aron-vtu
 
 set -euo pipefail
 
@@ -101,8 +104,8 @@ s=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' "$PREVIEW/api/admin/orders")
 [ "$s" = "401" ] || fail "/api/admin/orders returned $s, expected 401. DNS left untouched."
 echo "    admin API still refuses anonymous callers"
 
-# ── 5. Point the domain at the Worker ────────────────────────────────────────
-say "Pointing $APEX and $WWW at the Worker"
+# ── 5. Make sure the domain is still attached (already done; idempotent) ─────
+say "Confirming $APEX and $WWW are attached to the Worker"
 for host in "$APEX" "$WWW"; do
   resp=$(curl -sS -m 30 -X PUT \
     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
