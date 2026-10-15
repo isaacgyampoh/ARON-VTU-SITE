@@ -1,9 +1,12 @@
 # Production recovery: Vercel → Cloudflare Workers
 
 **Status: `chaledata.com` and `www.chaledata.com` are live on Cloudflare
-Workers over HTTPS.** Every route works except the home page, `/detail/[code]`
-and the sitemap, which read Supabase and return 500 until the four credentials
-Vercel will not give back are supplied once. See
+Workers over HTTPS, serving the real storefront from the production database.**
+The home page, `/detail/[code]` and the sitemap all render real plans and
+prices. Supabase is connected; its 812 orders and 104 customers are untouched.
+
+**One gap remains: the two Paystack keys are not set, so checkout cannot take
+payment.** Everything else — browsing, order tracking, the admin — works. See
 [What is still needed](#what-is-still-needed).
 
 ## Why production went down
@@ -105,15 +108,18 @@ inlined into the old client bundle are unreachable too. They are not in git
 history. They are genuinely unrecoverable and must come from the source
 dashboards:
 
-| Variable | Where to get it |
+| Variable | Status |
 | --- | --- |
-| `SUPABASE_URL` | Supabase → Project Settings → Data API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → `service_role` |
-| `PAYSTACK_SECRET_KEY` | Paystack → Settings → API Keys & Webhooks |
-| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | Paystack → Settings → API Keys & Webhooks |
+| `SUPABASE_URL` | **Done.** Recovered through the Supabase Management API against the "Aaron Data" project. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Done.** Same route; set as a Worker secret. |
+| `ADMIN_PASSWORD` | **Done.** Generated fresh — see `.admin-credentials.txt`. |
+| `ADMIN_SESSION_SECRET` | **Done.** Generated fresh. |
+| `PAYSTACK_SECRET_KEY` | **Still needed.** Paystack → Settings → API Keys & Webhooks (`sk_live_…`). |
+| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | **Still needed.** Same screen (`pk_live_…`). Inlined at build time, so it needs a rebuild, not just a secret. |
 
-`ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` did **not** need recovering — both
-were generated fresh and are already set as Worker secrets.
+Also check that the Paystack webhook URL points at
+`https://chaledata.com/api/webhook` — it will still be aimed at the old Vercel
+deployment, and paid orders are only fulfilled when that webhook arrives.
 
 **To finish:** fill in `.secrets-to-fill.env` (gitignored) and run
 
