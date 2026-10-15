@@ -53,3 +53,4 @@ next-env.d.ts
 
 # recovery credential hand-off (never commit)
 .secrets-to-fill.env
+.admin-credentials.txt
